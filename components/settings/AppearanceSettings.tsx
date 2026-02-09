@@ -68,6 +68,18 @@ export const AppearanceSettings: React.FC = () => {
           showArrow
         />
         <ListItem
+          onPress={() =>
+            router.push("/settings/appearance/home-collections/page")
+          }
+          title={t("home.settings.appearance.home_collections")}
+          showArrow
+        />
+        <ListItem
+          onPress={() => router.push("/settings/appearance/home-sections/page")}
+          title={t("home.settings.appearance.home_sections")}
+          showArrow
+        />
+        <ListItem
           title={t("home.settings.appearance.hide_remote_session_button")}
         >
           <Switch

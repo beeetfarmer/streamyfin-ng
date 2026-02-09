@@ -180,6 +180,31 @@ export const Home = () => {
     staleTime: 60 * 1000,
   });
 
+  // Fetch all BoxSet collections for the home screen
+  const { data: allBoxSets } = useQuery({
+    queryKey: ["home", "boxSets", user?.Id],
+    queryFn: async () => {
+      if (!api || !user?.Id) {
+        return [];
+      }
+
+      const response = await getItemsApi(api).getItems({
+        userId: user.Id,
+        includeItemTypes: ["BoxSet"],
+        recursive: true,
+        fields: ["PrimaryImageAspectRatio"],
+        imageTypeLimit: 1,
+        enableImageTypes: ["Primary", "Backdrop", "Thumb"],
+        sortBy: ["SortName"],
+        sortOrder: ["Ascending"],
+      });
+
+      return response.data.Items || [];
+    },
+    enabled: !!api && !!user?.Id,
+    staleTime: 60 * 1000,
+  });
+
   const userViews = useMemo(
     () => data?.filter((l) => !settings?.hiddenLibraries?.includes(l.Id!)),
     [data, settings?.hiddenLibraries],
@@ -478,7 +503,75 @@ export const Home = () => {
     return ss;
   }, [api, user?.Id, settings?.home?.sections, t]);
 
-  const sections = settings?.home?.sections ? customSections : defaultSections;
+  // Create sections for selected BoxSet collections
+  const collectionSections = useMemo(() => {
+    if (
+      !api ||
+      !user?.Id ||
+      !settings?.homeCollections?.length ||
+      !allBoxSets?.length
+    ) {
+      return [];
+    }
+
+    // Filter to only selected collections
+    const selectedCollections = allBoxSets.filter(
+      (boxSet) => boxSet.Id && settings.homeCollections?.includes(boxSet.Id),
+    );
+
+    return selectedCollections.map(
+      (collection): InfiniteScrollingCollectionListSection => ({
+        type: "InfiniteScrollingCollectionList",
+        title: collection.Name || "Collection",
+        queryKey: ["home", "collection", user.Id, collection.Id],
+        queryFn: async ({ pageParam = 0 }) => {
+          const response = await getItemsApi(api).getItems({
+            userId: user.Id,
+            parentId: collection.Id,
+            startIndex: pageParam,
+            limit: 10,
+            fields: ["PrimaryImageAspectRatio"],
+            imageTypeLimit: 1,
+            enableImageTypes: ["Primary", "Backdrop", "Thumb"],
+          });
+          return response.data.Items || [];
+        },
+        orientation: "vertical",
+        pageSize: 10,
+        priority: 2,
+        parentId: collection.Id,
+      }),
+    );
+  }, [api, user?.Id, settings?.homeCollections, allBoxSets]);
+
+  const allSections = settings?.home?.sections
+    ? customSections
+    : [...defaultSections, ...collectionSections];
+
+  // Apply visibility filter and custom ordering
+  const sections = useMemo(() => {
+    // Filter out hidden sections
+    const visibleSections = allSections.filter((section) => {
+      const sectionKey = section.queryKey.join("-");
+      return !settings?.hiddenHomeSections?.includes(sectionKey);
+    });
+
+    // Apply custom ordering if set
+    if (settings?.homeSectionOrder?.length) {
+      const orderMap = new Map(
+        settings.homeSectionOrder.map((key, index) => [key, index]),
+      );
+      return [...visibleSections].sort((a, b) => {
+        const keyA = a.queryKey.join("-");
+        const keyB = b.queryKey.join("-");
+        const orderA = orderMap.get(keyA) ?? 999;
+        const orderB = orderMap.get(keyB) ?? 999;
+        return orderA - orderB;
+      });
+    }
+
+    return visibleSections;
+  }, [allSections, settings?.hiddenHomeSections, settings?.homeSectionOrder]);
 
   // Get all high priority section keys and check if all have loaded
   const highPrioritySectionKeys = useMemo(() => {

@@ -199,7 +199,7 @@ onlineManager.setEventListener((setOnline) => {
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 0, // Always stale - triggers background refetch on mount
+      staleTime: 60 * 1000, // 60s - show cached data instantly, refetch in background when stale
       gcTime: 1000 * 60 * 60 * 24, // 24 hours - keep in cache for offline
       networkMode: "offlineFirst", // Return cache first, refetch if online
       refetchOnMount: true, // Refetch when component mounts

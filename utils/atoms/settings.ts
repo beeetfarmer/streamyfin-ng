@@ -211,6 +211,14 @@ export type Settings = {
   preferLocalAudio: boolean;
   // Audio transcoding mode
   audioTranscodeMode: AudioTranscodeMode;
+  // Home screen collections (BoxSets) to display as carousels
+  homeCollections?: string[];
+  // Home screen section visibility and order
+  hiddenHomeSections?: string[];
+  homeSectionOrder?: string[];
+  // TMDB integration
+  showTmdbCastInfo: boolean;
+  tmdbApiKey?: string;
 };
 
 export interface Lockable<T> {
@@ -296,6 +304,14 @@ export const defaultValues: Settings = {
   preferLocalAudio: true,
   // Audio transcoding mode
   audioTranscodeMode: AudioTranscodeMode.Auto,
+  // Home screen collections
+  homeCollections: [],
+  // Home screen section visibility and order
+  hiddenHomeSections: [],
+  homeSectionOrder: [],
+  // TMDB integration
+  showTmdbCastInfo: false,
+  tmdbApiKey: undefined,
 };
 
 const loadSettings = (): Partial<Settings> => {

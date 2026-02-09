@@ -121,7 +121,12 @@
       "appearance": {
         "title": "Appearance",
         "merge_next_up_continue_watching": "Merge Continue Watching & Next Up",
-        "hide_remote_session_button": "Hide Remote Session Button"
+        "hide_remote_session_button": "Hide Remote Session Button",
+        "home_collections": "Home Collections",
+        "home_collections_description": "Select collections to display as carousels on the home screen.",
+        "no_collections_found": "No collections found. Create collections in Jellyfin to see them here.",
+        "home_sections": "Home Sections",
+        "home_sections_description": "Toggle visibility and drag to reorder sections on the home screen."
       },
       "network": {
         "title": "Network",
@@ -390,6 +395,19 @@
         "kefinTweaks": {
           "watchlist_enabler": "Enable our Watchlist integration",
           "watchlist_button": "Toggle Watchlist integration"
+        },
+        "tmdb": {
+          "title": "TMDB",
+          "show_cast_info": "Show more info for cast members",
+          "show_cast_info_hint": "Shows additional movies and TV shows from TMDB that an actor has appeared in, beyond what's in your library.",
+          "api_key": "TMDB API Key",
+          "api_key_placeholder": "Enter your TMDB API key",
+          "api_key_hint": "A free TMDB API key is required.",
+          "get_api_key": "Get a free API key from TMDB.",
+          "save": "Save",
+          "toasts": {
+            "saved": "Saved"
+          }
         }
       },
       "storage": {
@@ -575,7 +593,9 @@
       "filter_by": "Filter By",
       "sort_order": "Sort Order",
       "tags": "Tags"
-    }
+    },
+    "random_play": "Play Random",
+    "no_unwatched_items": "No unwatched items found"
   },
   "favorites": {
     "series": "Series",
@@ -630,7 +650,9 @@
     "subtitles": "Subtitle",
     "show_more": "Show More",
     "show_less": "Show Less",
-    "appeared_in": "Appeared In",
+    "appeared_in": "In Library",
+    "other_shows": "Other Shows",
+    "other_movies": "Other Movies",
     "could_not_load_item": "Could Not Load Item",
     "none": "None",
     "download": {
