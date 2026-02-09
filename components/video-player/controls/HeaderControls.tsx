@@ -13,6 +13,7 @@ import { OrientationLock } from "@/packages/expo-screen-orientation";
 import { useSettings } from "@/utils/atoms/settings";
 import { HEADER_LAYOUT, ICON_SIZES } from "./constants";
 import DropdownView from "./dropdown/DropdownView";
+import SubtitleSelector from "./SubtitleSelector";
 import { PlaybackSpeedScope } from "./utils/playback-speed-settings";
 import { type AspectRatio } from "./VideoScalingModeSelector";
 import { ZoomToggle } from "./ZoomToggle";
@@ -109,7 +110,7 @@ export const HeaderControls: FC<HeaderControlsProps> = ({
       pointerEvents={showControls ? "auto" : "none"}
       className='flex flex-row justify-between'
     >
-      <View className='mr-auto' pointerEvents='box-none'>
+      <View className='mr-auto flex-row items-center' pointerEvents='box-none'>
         {!Platform.isTV && (!offline || !mediaSource?.TranscodingUrl) && (
           <View pointerEvents='auto'>
             <DropdownView
@@ -118,6 +119,11 @@ export const HeaderControls: FC<HeaderControlsProps> = ({
               showTechnicalInfo={showTechnicalInfo}
               onToggleTechnicalInfo={onToggleTechnicalInfo}
             />
+          </View>
+        )}
+        {!Platform.isTV && (
+          <View pointerEvents='auto'>
+            <SubtitleSelector />
           </View>
         )}
       </View>
