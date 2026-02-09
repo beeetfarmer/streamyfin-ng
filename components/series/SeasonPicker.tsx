@@ -3,7 +3,7 @@ import type { BaseItemDto } from "@jellyfin/sdk/lib/generated-client/models";
 import { getTvShowsApi } from "@jellyfin/sdk/lib/utils/api";
 import { useQuery } from "@tanstack/react-query";
 import { atom, useAtom } from "jotai";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import {
@@ -138,20 +138,8 @@ export const SeasonPicker: React.FC<Props> = ({ item }) => {
       : !!api && !!user?.Id && !!item.Id && !!selectedSeasonId,
   });
 
-  // Used for height calculation
-  const [nrOfEpisodes, setNrOfEpisodes] = useState(0);
-  useEffect(() => {
-    if (episodes && episodes.length > 0) {
-      setNrOfEpisodes(episodes.length);
-    }
-  }, [episodes]);
-
   return (
-    <View
-      style={{
-        minHeight: 144 * nrOfEpisodes,
-      }}
-    >
+    <View>
       <View className='flex flex-row justify-start items-center px-4'>
         <SeasonDropdown
           item={item}
@@ -184,12 +172,7 @@ export const SeasonPicker: React.FC<Props> = ({ item }) => {
       </View>
       <View className='px-4 flex flex-col mt-4'>
         {isPending ? (
-          <View
-            style={{
-              minHeight: 144 * nrOfEpisodes,
-            }}
-            className='flex flex-col items-center justify-center'
-          >
+          <View className='flex flex-col items-center justify-center'>
             <Loader />
           </View>
         ) : (

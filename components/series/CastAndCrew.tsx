@@ -68,7 +68,7 @@ export const CastAndCrew: React.FC<Props> = ({ item, loading, ...props }) => {
             className='flex flex-col w-28'
           >
             <Poster id={i.Id} url={getPrimaryImageUrl({ api, item: i })} />
-            <Text className='mt-2' numberOfLines={1}>
+            <Text className='mt-2' numberOfLines={1} ellipsizeMode='tail'>
               {i.Name}
             </Text>
             <Text className='text-xs opacity-50' numberOfLines={1}>

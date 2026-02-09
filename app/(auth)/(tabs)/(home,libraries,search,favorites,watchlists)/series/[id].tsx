@@ -10,9 +10,10 @@ import { useTranslation } from "react-i18next";
 import { Platform, View } from "react-native";
 import { AddToFavorites } from "@/components/AddToFavorites";
 import { DownloadItems } from "@/components/DownloadItem";
+import { ItemPeopleSections } from "@/components/item/ItemPeopleSections";
 import { ParallaxScrollView } from "@/components/ParallaxPage";
 import { NextUp } from "@/components/series/NextUp";
-import { SeasonPicker } from "@/components/series/SeasonPicker";
+import { SeasonGrid } from "@/components/series/SeasonGrid";
 import { SeriesHeader } from "@/components/series/SeriesHeader";
 import { useDownload } from "@/providers/DownloadProvider";
 import { apiAtom, userAtom } from "@/providers/JellyfinProvider";
@@ -30,13 +31,8 @@ const page: React.FC = () => {
   const navigation = useNavigation();
   const { t } = useTranslation();
   const params = useLocalSearchParams();
-  const {
-    id: seriesId,
-    seasonIndex,
-    offline: offlineParam,
-  } = params as {
+  const { id: seriesId, offline: offlineParam } = params as {
     id: string;
-    seasonIndex: string;
     offline?: string;
   };
 
@@ -202,11 +198,16 @@ const page: React.FC = () => {
         <View className='flex flex-col pt-4'>
           <SeriesHeader item={item} />
           {!isOffline && (
-            <View className='mb-4'>
+            <View className='mb-6'>
               <NextUp seriesId={seriesId} />
             </View>
           )}
-          <SeasonPicker item={item} initialSeasonIndex={Number(seasonIndex)} />
+          <View className='mb-6'>
+            <SeasonGrid item={item} />
+          </View>
+          {!isOffline && item && (
+            <ItemPeopleSections item={item} className='mt-6' />
+          )}
         </View>
       </ParallaxScrollView>
     </OfflineModeProvider>
