@@ -252,15 +252,15 @@ export const ItemContent: React.FC<ItemContentProps> = React.memo(
                 <ItemTechnicalDetails source={selectedOptions.mediaSource} />
               )}
 
-            <OverviewText text={item.Overview} className='px-4 mb-4' />
+            <OverviewText text={item.Overview} className='px-4 mb-6' />
 
             {item.Type !== "Program" && (
               <>
                 {item.Type === "Episode" && !isOffline && (
-                  <CurrentSeries item={item} className='mb-2' />
+                  <CurrentSeries item={item} className='mb-4' />
                 )}
 
-                <ItemPeopleSections item={item} />
+                <ItemPeopleSections item={item} className='mb-4' />
 
                 {!isOffline && <SimilarItems itemId={item.Id} />}
               </>

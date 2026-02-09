@@ -7,7 +7,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAtom } from "jotai";
 import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Platform, StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "@/components/common/Text";
 import { Loader } from "@/components/Loader";
@@ -22,6 +22,13 @@ export default function index() {
   const { settings } = useSettings();
 
   const { t } = useTranslation();
+  const { width } = useWindowDimensions();
+
+  const nrOfCols = useMemo(() => {
+    if (width < 500) return 1;
+    if (width < 800) return 2;
+    return 3;
+  }, [width]);
 
   const { data, isLoading } = useQuery({
     queryKey: ["user-views", user?.Id],
@@ -80,7 +87,9 @@ export default function index() {
 
   return (
     <FlashList
+      key={nrOfCols}
       extraData={settings}
+      numColumns={nrOfCols}
       contentInsetAdjustmentBehavior='automatic'
       contentContainerStyle={{
         paddingTop: Platform.OS === "android" ? 17 : 0,
@@ -90,7 +99,17 @@ export default function index() {
         paddingRight: insets.right + 17,
       }}
       data={libraries}
-      renderItem={({ item }) => <LibraryItemCard library={item} />}
+      renderItem={({ item, index }) => (
+        <View
+          style={{
+            paddingLeft: nrOfCols > 1 && index % nrOfCols !== 0 ? 6 : 0,
+            paddingRight:
+              nrOfCols > 1 && index % nrOfCols !== nrOfCols - 1 ? 6 : 0,
+          }}
+        >
+          <LibraryItemCard library={item} />
+        </View>
+      )}
       keyExtractor={(item) => item.Id || ""}
       ItemSeparatorComponent={() =>
         settings?.libraryOptions?.display === "row" ? (
@@ -101,7 +120,7 @@ export default function index() {
             className='bg-neutral-800 mx-2 my-4'
           />
         ) : (
-          <View className='h-4' />
+          <View className='h-6' />
         )
       }
     />

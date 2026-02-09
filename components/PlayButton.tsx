@@ -505,7 +505,7 @@ export const PlayButton: React.FC<Props> = ({
       accessibilityLabel='Play button'
       accessibilityHint='Tap to play the media'
       onPress={onPress}
-      className={"relative flex-1"}
+      className={"relative flex-1 max-w-md"}
     >
       <View className='absolute w-full h-full top-0 left-0 rounded-full z-10 overflow-hidden'>
         <Animated.View

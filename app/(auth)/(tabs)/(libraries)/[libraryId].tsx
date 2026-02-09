@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import type {
   BaseItemDto,
   BaseItemDtoQueryResult,
@@ -15,8 +16,14 @@ import { useLocalSearchParams, useNavigation } from "expo-router";
 import { useAtom } from "jotai";
 import React, { useCallback, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { FlatList, useWindowDimensions, View } from "react-native";
+import {
+  FlatList,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { toast } from "sonner-native";
 import { Text } from "@/components/common/Text";
 import { TouchableItemRouter } from "@/components/common/TouchableItemRouter";
 import { FilterButton } from "@/components/filters/FilterButton";
@@ -24,6 +31,7 @@ import { ResetFiltersButton } from "@/components/filters/ResetFiltersButton";
 import { ItemCardText } from "@/components/ItemCardText";
 import { Loader } from "@/components/Loader";
 import { ItemPoster } from "@/components/posters/ItemPoster";
+import useRouter from "@/hooks/useAppRouter";
 import { useOrientation } from "@/hooks/useOrientation";
 import * as ScreenOrientation from "@/packages/expo-screen-orientation";
 import { apiAtom, userAtom } from "@/providers/JellyfinProvider";
@@ -161,6 +169,8 @@ const Page = () => {
     [libraryId, filterByPreference, setFilterByPreference, _setFilterBy],
   );
 
+  const router = useRouter();
+
   const nrOfCols = useMemo(() => {
     if (screenWidth < 300) return 2;
     if (screenWidth < 500) return 3;
@@ -190,6 +200,73 @@ const Page = () => {
       title: library?.Name || "",
     });
   }, [library]);
+
+  const handleRandomPlay = useCallback(async () => {
+    if (!api || !library) return;
+
+    let itemType: BaseItemKind | undefined;
+    if (library.CollectionType === "movies") {
+      itemType = "Movie";
+    } else if (library.CollectionType === "tvshows") {
+      itemType = "Series";
+    } else if (library.CollectionType === "boxsets") {
+      itemType = "BoxSet";
+    } else if (library.CollectionType === "homevideos") {
+      itemType = "Video";
+    } else if (library.CollectionType === "musicvideos") {
+      itemType = "MusicVideo";
+    }
+
+    const filters: ItemFilter[] = [...((filterBy as ItemFilter[]) || [])];
+    if (!filters.includes("IsUnplayed")) {
+      filters.push("IsUnplayed");
+    }
+
+    const response = await getItemsApi(api).getItems({
+      userId: user?.Id,
+      parentId: libraryId,
+      limit: 1,
+      sortBy: ["Random"],
+      sortOrder: ["Ascending"],
+      enableImageTypes: ["Primary"],
+      filters,
+      recursive: true,
+      fields: ["PrimaryImageAspectRatio"],
+      genres: selectedGenres,
+      tags: selectedTags,
+      years: selectedYears.map((year) => Number.parseInt(year, 10)),
+      includeItemTypes: itemType ? [itemType] : undefined,
+    });
+
+    const item = response.data.Items?.[0];
+    if (!item?.Id) {
+      toast(t("library.no_unwatched_items"));
+      return;
+    }
+
+    if (library.CollectionType === "tvshows") {
+      router.push({
+        pathname: "/series/[id]" as const,
+        params: { id: item.Id },
+      });
+    } else {
+      router.push({
+        pathname: "/items/page" as const,
+        params: { id: item.Id },
+      });
+    }
+  }, [
+    api,
+    user?.Id,
+    libraryId,
+    library,
+    selectedGenres,
+    selectedYears,
+    selectedTags,
+    filterBy,
+    router,
+    t,
+  ]);
 
   const fetchItems = useCallback(
     async ({
@@ -330,163 +407,173 @@ const Page = () => {
   const settings = useSettings();
   const ListHeaderComponent = useCallback(
     () => (
-      <FlatList
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{
-          display: "flex",
-          paddingHorizontal: 15,
-          paddingVertical: 16,
-          flexDirection: "row",
-        }}
-        data={[
-          {
-            key: "reset",
-            component: <ResetFiltersButton />,
-          },
-          {
-            key: "genre",
-            component: (
-              <FilterButton
-                className='mr-1'
-                id={libraryId}
-                queryKey='genreFilter'
-                queryFn={async () => {
-                  if (!api) return null;
-                  const response = await getFilterApi(
-                    api,
-                  ).getQueryFiltersLegacy({
-                    userId: user?.Id,
-                    parentId: libraryId,
-                  });
-                  return response.data.Genres || [];
-                }}
-                set={setSelectedGenres}
-                values={selectedGenres}
-                title={t("library.filters.genres")}
-                renderItemLabel={(item) => item.toString()}
-                searchFilter={(item, search) =>
-                  item.toLowerCase().includes(search.toLowerCase())
-                }
-              />
-            ),
-          },
-          {
-            key: "year",
-            component: (
-              <FilterButton
-                className='mr-1'
-                id={libraryId}
-                queryKey='yearFilter'
-                queryFn={async () => {
-                  if (!api) return null;
-                  const response = await getFilterApi(
-                    api,
-                  ).getQueryFiltersLegacy({
-                    userId: user?.Id,
-                    parentId: libraryId,
-                  });
-                  return response.data.Years || [];
-                }}
-                set={setSelectedYears}
-                values={selectedYears}
-                title={t("library.filters.years")}
-                renderItemLabel={(item) => item.toString()}
-                searchFilter={(item, search) => item.includes(search)}
-              />
-            ),
-          },
-          {
-            key: "tags",
-            component: (
-              <FilterButton
-                className='mr-1'
-                id={libraryId}
-                queryKey='tagsFilter'
-                queryFn={async () => {
-                  if (!api) return null;
-                  const response = await getFilterApi(
-                    api,
-                  ).getQueryFiltersLegacy({
-                    userId: user?.Id,
-                    parentId: libraryId,
-                  });
-                  return response.data.Tags || [];
-                }}
-                set={setSelectedTags}
-                values={selectedTags}
-                title={t("library.filters.tags")}
-                renderItemLabel={(item) => item.toString()}
-                searchFilter={(item, search) =>
-                  item.toLowerCase().includes(search.toLowerCase())
-                }
-              />
-            ),
-          },
-          {
-            key: "sortBy",
-            component: (
-              <FilterButton
-                className='mr-1'
-                id={libraryId}
-                queryKey='sortBy'
-                queryFn={async () => sortOptions.map((s) => s.key)}
-                set={setSortBy}
-                values={sortBy}
-                title={t("library.filters.sort_by")}
-                renderItemLabel={(item) =>
-                  sortOptions.find((i) => i.key === item)?.value || ""
-                }
-                searchFilter={(item, search) =>
-                  item.toLowerCase().includes(search.toLowerCase())
-                }
-              />
-            ),
-          },
-          {
-            key: "sortOrder",
-            component: (
-              <FilterButton
-                className='mr-1'
-                id={libraryId}
-                queryKey='sortOrder'
-                queryFn={async () => sortOrderOptions.map((s) => s.key)}
-                set={setSortOrder}
-                values={sortOrder}
-                title={t("library.filters.sort_order")}
-                renderItemLabel={(item) =>
-                  sortOrderOptions.find((i) => i.key === item)?.value || ""
-                }
-                searchFilter={(item, search) =>
-                  item.toLowerCase().includes(search.toLowerCase())
-                }
-              />
-            ),
-          },
-          {
-            key: "filterOptions",
-            component: (
-              <FilterButton
-                className='mr-1'
-                id={libraryId}
-                queryKey='filters'
-                queryFn={async () => generalFilters.map((s) => s.key)}
-                set={setFilter}
-                values={filterBy}
-                title={t("library.filters.filter_by")}
-                renderItemLabel={(item) =>
-                  generalFilters.find((i) => i.key === item)?.value || ""
-                }
-                searchFilter={(item, search) =>
-                  item.toLowerCase().includes(search.toLowerCase())
-                }
-              />
-            ),
-          },
-        ]}
-        renderItem={({ item }) => item.component}
-        keyExtractor={(item) => item.key}
-      />
+      <View style={{ flexDirection: "row", alignItems: "center" }}>
+        <FlatList
+          style={{ flex: 1 }}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{
+            display: "flex",
+            paddingHorizontal: 15,
+            paddingVertical: 16,
+            flexDirection: "row",
+          }}
+          data={[
+            {
+              key: "reset",
+              component: <ResetFiltersButton />,
+            },
+            {
+              key: "genre",
+              component: (
+                <FilterButton
+                  className='mr-1'
+                  id={libraryId}
+                  queryKey='genreFilter'
+                  queryFn={async () => {
+                    if (!api) return null;
+                    const response = await getFilterApi(
+                      api,
+                    ).getQueryFiltersLegacy({
+                      userId: user?.Id,
+                      parentId: libraryId,
+                    });
+                    return response.data.Genres || [];
+                  }}
+                  set={setSelectedGenres}
+                  values={selectedGenres}
+                  title={t("library.filters.genres")}
+                  renderItemLabel={(item) => item.toString()}
+                  searchFilter={(item, search) =>
+                    item.toLowerCase().includes(search.toLowerCase())
+                  }
+                />
+              ),
+            },
+            {
+              key: "year",
+              component: (
+                <FilterButton
+                  className='mr-1'
+                  id={libraryId}
+                  queryKey='yearFilter'
+                  queryFn={async () => {
+                    if (!api) return null;
+                    const response = await getFilterApi(
+                      api,
+                    ).getQueryFiltersLegacy({
+                      userId: user?.Id,
+                      parentId: libraryId,
+                    });
+                    return response.data.Years || [];
+                  }}
+                  set={setSelectedYears}
+                  values={selectedYears}
+                  title={t("library.filters.years")}
+                  renderItemLabel={(item) => item.toString()}
+                  searchFilter={(item, search) => item.includes(search)}
+                />
+              ),
+            },
+            {
+              key: "tags",
+              component: (
+                <FilterButton
+                  className='mr-1'
+                  id={libraryId}
+                  queryKey='tagsFilter'
+                  queryFn={async () => {
+                    if (!api) return null;
+                    const response = await getFilterApi(
+                      api,
+                    ).getQueryFiltersLegacy({
+                      userId: user?.Id,
+                      parentId: libraryId,
+                    });
+                    return response.data.Tags || [];
+                  }}
+                  set={setSelectedTags}
+                  values={selectedTags}
+                  title={t("library.filters.tags")}
+                  renderItemLabel={(item) => item.toString()}
+                  searchFilter={(item, search) =>
+                    item.toLowerCase().includes(search.toLowerCase())
+                  }
+                />
+              ),
+            },
+            {
+              key: "sortBy",
+              component: (
+                <FilterButton
+                  className='mr-1'
+                  id={libraryId}
+                  queryKey='sortBy'
+                  queryFn={async () => sortOptions.map((s) => s.key)}
+                  set={setSortBy}
+                  values={sortBy}
+                  title={t("library.filters.sort_by")}
+                  renderItemLabel={(item) =>
+                    sortOptions.find((i) => i.key === item)?.value || ""
+                  }
+                  searchFilter={(item, search) =>
+                    item.toLowerCase().includes(search.toLowerCase())
+                  }
+                />
+              ),
+            },
+            {
+              key: "sortOrder",
+              component: (
+                <FilterButton
+                  className='mr-1'
+                  id={libraryId}
+                  queryKey='sortOrder'
+                  queryFn={async () => sortOrderOptions.map((s) => s.key)}
+                  set={setSortOrder}
+                  values={sortOrder}
+                  title={t("library.filters.sort_order")}
+                  renderItemLabel={(item) =>
+                    sortOrderOptions.find((i) => i.key === item)?.value || ""
+                  }
+                  searchFilter={(item, search) =>
+                    item.toLowerCase().includes(search.toLowerCase())
+                  }
+                />
+              ),
+            },
+            {
+              key: "filterOptions",
+              component: (
+                <FilterButton
+                  className='mr-1'
+                  id={libraryId}
+                  queryKey='filters'
+                  queryFn={async () => generalFilters.map((s) => s.key)}
+                  set={setFilter}
+                  values={filterBy}
+                  title={t("library.filters.filter_by")}
+                  renderItemLabel={(item) =>
+                    generalFilters.find((i) => i.key === item)?.value || ""
+                  }
+                  searchFilter={(item, search) =>
+                    item.toLowerCase().includes(search.toLowerCase())
+                  }
+                />
+              ),
+            },
+          ]}
+          renderItem={({ item }) => item.component}
+          keyExtractor={(item) => item.key}
+        />
+        <TouchableOpacity
+          onPress={handleRandomPlay}
+          style={{ paddingRight: 15, paddingLeft: 4 }}
+          accessibilityLabel={t("library.random_play")}
+        >
+          <Ionicons name='shuffle' size={22} color='white' />
+        </TouchableOpacity>
+      </View>
     ),
     [
       libraryId,
@@ -506,6 +593,7 @@ const Page = () => {
       filterBy,
       setFilter,
       settings,
+      handleRandomPlay,
     ],
   );
 

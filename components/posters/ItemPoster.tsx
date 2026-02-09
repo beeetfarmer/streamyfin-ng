@@ -1,23 +1,14 @@
 import { type BaseItemDto } from "@jellyfin/sdk/lib/generated-client/models";
-import { useState } from "react";
 import { View, type ViewProps } from "react-native";
 import { ItemImage } from "../common/ItemImage";
+import { ProgressBar } from "../common/ProgressBar";
 import { WatchedIndicator } from "../WatchedIndicator";
 
 interface Props extends ViewProps {
   item: BaseItemDto;
-  showProgress?: boolean;
 }
 
-export const ItemPoster: React.FC<Props> = ({
-  item,
-  showProgress,
-  ...props
-}) => {
-  const [progress, _setProgress] = useState(
-    item.UserData?.PlayedPercentage || 0,
-  );
-
+export const ItemPoster: React.FC<Props> = ({ item, ...props }) => {
   if (item.Type === "Movie" || item.Type === "Series" || item.Type === "BoxSet")
     return (
       <View
@@ -32,9 +23,7 @@ export const ItemPoster: React.FC<Props> = ({
           item={item}
         />
         <WatchedIndicator item={item} />
-        {showProgress && progress > 0 && (
-          <View className='h-1 bg-red-600 w-full' />
-        )}
+        <ProgressBar item={item} />
       </View>
     );
 
