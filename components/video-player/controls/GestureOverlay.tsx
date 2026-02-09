@@ -14,6 +14,8 @@ interface Props {
   onToggleControls: () => void;
   onSkipForward: () => void;
   onSkipBackward: () => void;
+  onSeekForward?: (seconds: number) => void;
+  onSeekBackward?: (seconds: number) => void;
 }
 
 interface FeedbackState {
@@ -30,6 +32,8 @@ export const GestureOverlay = ({
   onToggleControls,
   onSkipForward,
   onSkipBackward,
+  onSeekForward,
+  onSeekBackward,
 }: Props) => {
   const { settings } = useSettings();
   const lightHaptic = useHaptic("light");
@@ -176,6 +180,24 @@ export const GestureOverlay = ({
     showFeedback,
   ]);
 
+  const handleDoubleTapRight = useCallback(() => {
+    if (!onSeekForward) return;
+    lightHaptic();
+    requestAnimationFrame(() => {
+      onSeekForward(10);
+      showFeedback("play-forward", "+10s", "right");
+    });
+  }, [onSeekForward, lightHaptic, showFeedback]);
+
+  const handleDoubleTapLeft = useCallback(() => {
+    if (!onSeekBackward) return;
+    lightHaptic();
+    requestAnimationFrame(() => {
+      onSeekBackward(10);
+      showFeedback("play-back", "-10s", "left");
+    });
+  }, [onSeekBackward, lightHaptic, showFeedback]);
+
   const handleVerticalDragStart = useCallback(
     (side: "left" | "right", startY: number) => {
       if (side === "left" && settings.enableLeftSideBrightnessSwipe) {
@@ -243,6 +265,8 @@ export const GestureOverlay = ({
       onVerticalDragMove: handleVerticalDragMove,
       onVerticalDragEnd: handleVerticalDragEnd,
       onTap: onToggleControls,
+      onDoubleTapLeft: handleDoubleTapLeft,
+      onDoubleTapRight: handleDoubleTapRight,
       screenWidth,
       screenHeight,
     });

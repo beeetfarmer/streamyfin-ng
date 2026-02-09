@@ -14,6 +14,8 @@ export interface SwipeGestureOptions {
   ) => void;
   onVerticalDragEnd?: (side: "left" | "right") => void;
   onTap?: () => void;
+  onDoubleTapLeft?: () => void;
+  onDoubleTapRight?: () => void;
   screenWidth?: number;
   screenHeight?: number;
 }
@@ -27,6 +29,8 @@ export const useGestureDetection = ({
   onVerticalDragMove,
   onVerticalDragEnd,
   onTap,
+  onDoubleTapLeft,
+  onDoubleTapRight,
   screenWidth = 400,
   screenHeight = 800,
 }: SwipeGestureOptions = {}) => {
@@ -38,6 +42,9 @@ export const useGestureDetection = ({
   const hasMovedEnough = useRef(false);
   const gestureType = useRef<"none" | "horizontal" | "vertical">("none");
   const shouldIgnoreTouch = useRef(false);
+  const lastTapTime = useRef(0);
+  const lastTapSide = useRef<"left" | "right" | null>(null);
+  const singleTapTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleTouchStart = useCallback(
     (event: GestureResponderEvent) => {
@@ -186,8 +193,45 @@ export const useGestureDetection = ({
         touchDuration < 300 &&
         totalDistance < 10
       ) {
-        // It's a tap - short duration and small movement
-        onTap?.();
+        // It's a tap - check for double-tap
+        const now = Date.now();
+        const tapSide =
+          touchStartPosition.current.x < screenWidth / 2 ? "left" : "right";
+        const timeSinceLastTap = now - lastTapTime.current;
+
+        if (
+          timeSinceLastTap < 300 &&
+          lastTapSide.current === tapSide &&
+          (onDoubleTapLeft || onDoubleTapRight)
+        ) {
+          // Double-tap detected — cancel pending single tap
+          if (singleTapTimeout.current) {
+            clearTimeout(singleTapTimeout.current);
+            singleTapTimeout.current = null;
+          }
+          lastTapTime.current = 0;
+          lastTapSide.current = null;
+
+          if (tapSide === "left") {
+            onDoubleTapLeft?.();
+          } else {
+            onDoubleTapRight?.();
+          }
+        } else {
+          // Possible single tap — delay to allow double-tap
+          lastTapTime.current = now;
+          lastTapSide.current = tapSide;
+
+          if (singleTapTimeout.current) {
+            clearTimeout(singleTapTimeout.current);
+          }
+          singleTapTimeout.current = setTimeout(() => {
+            singleTapTimeout.current = null;
+            lastTapTime.current = 0;
+            lastTapSide.current = null;
+            onTap?.();
+          }, 300);
+        }
       }
 
       hasMovedEnough.current = false;
@@ -200,6 +244,9 @@ export const useGestureDetection = ({
       onSwipeRight,
       onVerticalDragEnd,
       onTap,
+      onDoubleTapLeft,
+      onDoubleTapRight,
+      screenWidth,
     ],
   );
 
