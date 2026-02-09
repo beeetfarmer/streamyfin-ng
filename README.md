@@ -36,6 +36,28 @@
 - 👁️ **Sessions view:** View all active sessions currently streaming on your server
 - 📡 **Chromecast**: Cast your media to any Chromecast-enabled device
 
+## Additional Bug Fixes, Enhancements and New Features in the NG build:
+
+### Bug Fixes:
+
+- **Subtitle Size Fix**: Fixed subtitles appearing extremely large by default during video playback
+
+### Enhancements:
+
+- **Watched Indicators on All Posters**: Consistent watched/unwatched badges across the entire app on the posters
+- **Cast & Crew on Series Pages**:  Series/TV show pages now display Cast & Crew sections (previously only available on movie and episode pages) and includes "More with this actor" navigation
+- **Improved Actor Page Layout**: Redesigned actor/person page with a portrait image layout that works better on tablets and "Appeared In" section renamed to "In Library" for clarity
+
+### New Features:
+
+- **Subtitle Selector in Video Player**: Dedicated subtitle button in the player header controls for quick subtitle track switching
+- **Double-Tap to Seek**:  YouTube-style double-tap gesture in the video player
+- **Home Screen Collections**: New setting under **Appearance > Home Collections** to display Jellyfin BoxSet collections on the home screen
+- **Home Sections Visibility & Reordering**: New setting under **Appearance > Home Sections** to customize the home screen layout
+- **TMDB Integration for Actor Pages**: View an actor's **full filmography from TMDB** on their profile page even if their work is not present in your library (Add your TMDB API key under Settings > Plugins > TMDB for actor filmography features)
+
+> For more info about the changes in the ng build, check the [Changes.md](Changes.md) file.
+
 ## 🧪 Experimental Features
 
 Streamyfin offers exciting experimental features such as media downloading and Chromecast support. These features are under active development, and your feedback and patience help us make them even better.
