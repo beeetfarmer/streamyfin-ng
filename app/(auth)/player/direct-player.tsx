@@ -850,9 +850,9 @@ export default function page() {
           settings.mpvSubtitleFontSize,
         );
       }
-      // Apply subtitle size from general settings
+      // Apply subtitle size from general settings (stored as scale * 100)
       if (settings.subtitleSize) {
-        await videoRef.current?.setSubtitleFontSize?.(settings.subtitleSize);
+        await videoRef.current?.setSubtitleScale?.(settings.subtitleSize / 100);
       }
     };
 
