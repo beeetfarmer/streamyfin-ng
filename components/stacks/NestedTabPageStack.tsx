@@ -23,9 +23,11 @@ const routes = [
   "persons/[personId]",
   "items/page",
   "series/[id]",
+  "season/[seasonId]",
   "music/album/[albumId]",
   "music/artist/[artistId]",
   "music/playlist/[playlistId]",
+  "tmdb/[id]",
 ];
 
 export const nestedTabPageScreenOptions: Record<string, ICommonScreenOptions> =

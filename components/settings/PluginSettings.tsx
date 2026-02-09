@@ -38,6 +38,11 @@ export const PluginSettings = () => {
         title='KefinTweaks'
         showArrow
       />
+      <ListItem
+        onPress={() => router.push("/settings/plugins/tmdb/page")}
+        title={t("home.settings.plugins.tmdb.title")}
+        showArrow
+      />
     </ListGroup>
   );
 };
