@@ -15,10 +15,7 @@ import { I18nextProvider } from "react-i18next";
 import { Appearance, Platform } from "react-native";
 import { SystemBars } from "react-native-edge-to-edge";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import {
-  initialWindowMetrics,
-  SafeAreaProvider,
-} from "react-native-safe-area-context";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GlobalModal } from "@/components/GlobalModal";
 import i18n from "@/i18n";
 import { DownloadProvider } from "@/providers/DownloadProvider";
@@ -53,7 +50,7 @@ export default function RootLayout() {
       <JotaiProvider>
         <ActionSheetProvider>
           <I18nextProvider i18n={i18n}>
-            <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+            <SafeAreaProvider>
               <Layout />
             </SafeAreaProvider>
           </I18nextProvider>

@@ -1,30 +1,30 @@
+import { Ionicons } from "@expo/vector-icons";
 import {
-  createNativeBottomTabNavigator,
-  type NativeBottomTabNavigationEventMap,
-  type NativeBottomTabNavigationOptions,
-} from "@bottom-tabs/react-navigation";
+  type BottomTabNavigationEventMap,
+  type BottomTabNavigationOptions,
+  createBottomTabNavigator,
+} from "@react-navigation/bottom-tabs";
 import type {
   ParamListBase,
   TabNavigationState,
 } from "@react-navigation/native";
 import { withLayoutContext } from "expo-router";
 import { useTranslation } from "react-i18next";
-import { Platform, View } from "react-native";
-import { SystemBars } from "react-native-edge-to-edge";
+import { View } from "react-native";
 import { MiniPlayerBar } from "@/components/music/MiniPlayerBar";
 import { MusicPlaybackEngine } from "@/components/music/MusicPlaybackEngine";
 import { Colors } from "@/constants/Colors";
 import { useSettings } from "@/utils/atoms/settings";
 import { eventBus } from "@/utils/eventBus";
 
-const { Navigator } = createNativeBottomTabNavigator();
+const { Navigator } = createBottomTabNavigator();
 
-export const NativeTabs = withLayoutContext<
-  NativeBottomTabNavigationOptions,
+export const Tabs = withLayoutContext<
+  BottomTabNavigationOptions,
   typeof Navigator,
   TabNavigationState<ParamListBase>,
-  NativeBottomTabNavigationEventMap
->(Navigator);
+  BottomTabNavigationEventMap
+>(Navigator, undefined, true);
 
 export default function TabLayout() {
   const { settings } = useSettings();
@@ -32,18 +32,22 @@ export default function TabLayout() {
 
   return (
     <View style={{ flex: 1 }}>
-      <SystemBars hidden={false} style='light' />
-      <NativeTabs
-        sidebarAdaptable={false}
-        tabBarStyle={{
-          backgroundColor: "#121212",
+      <Tabs
+        screenOptions={{
+          headerShown: false,
+          tabBarStyle: {
+            backgroundColor: "#121212",
+            borderTopColor: "#1f1f1f",
+          },
+          tabBarActiveTintColor: Colors.primary,
+          tabBarInactiveTintColor: "#8f8f8f",
+          sceneStyle: {
+            backgroundColor: "black",
+          },
         }}
-        tabBarActiveTintColor={Colors.primary}
-        activeIndicatorColor={"#392c3b"}
-        scrollEdgeAppearance='default'
       >
-        <NativeTabs.Screen redirect name='index' />
-        <NativeTabs.Screen
+        <Tabs.Screen redirect name='index' />
+        <Tabs.Screen
           listeners={(_e) => ({
             tabPress: (_e) => {
               eventBus.emit("scrollToTop");
@@ -52,13 +56,12 @@ export default function TabLayout() {
           name='(home)'
           options={{
             title: t("tabs.home"),
-            tabBarIcon:
-              Platform.OS === "android"
-                ? (_e) => require("@/assets/icons/house.fill.png")
-                : (_e) => ({ sfSymbol: "house.fill" }),
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name='home' color={color} size={size} />
+            ),
           }}
         />
-        <NativeTabs.Screen
+        <Tabs.Screen
           listeners={(_e) => ({
             tabPress: (_e) => {
               eventBus.emit("searchTabPressed");
@@ -66,58 +69,53 @@ export default function TabLayout() {
           })}
           name='(search)'
           options={{
-            role: "search",
             title: t("tabs.search"),
-            tabBarIcon:
-              Platform.OS === "android"
-                ? (_e) => require("@/assets/icons/magnifyingglass.png")
-                : (_e) => ({ sfSymbol: "magnifyingglass" }),
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name='search' color={color} size={size} />
+            ),
           }}
         />
-        <NativeTabs.Screen
+        <Tabs.Screen
           name='(favorites)'
           options={{
             title: t("tabs.favorites"),
-            tabBarIcon:
-              Platform.OS === "android"
-                ? (_e) => require("@/assets/icons/heart.fill.png")
-                : (_e) => ({ sfSymbol: "heart.fill" }),
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name='heart' color={color} size={size} />
+            ),
           }}
         />
-        <NativeTabs.Screen
-          name='(watchlists)'
-          options={{
-            title: t("watchlists.title"),
-            tabBarItemHidden:
-              !settings?.streamyStatsServerUrl || settings?.hideWatchlistsTab,
-            tabBarIcon:
-              Platform.OS === "android"
-                ? (_e) => require("@/assets/icons/list.png")
-                : (_e) => ({ sfSymbol: "list.bullet.rectangle" }),
-          }}
-        />
-        <NativeTabs.Screen
+        {!!settings?.streamyStatsServerUrl && !settings?.hideWatchlistsTab && (
+          <Tabs.Screen
+            name='(watchlists)'
+            options={{
+              title: t("watchlists.title"),
+              tabBarIcon: ({ color, size }) => (
+                <Ionicons name='list' color={color} size={size} />
+              ),
+            }}
+          />
+        )}
+        <Tabs.Screen
           name='(libraries)'
           options={{
             title: t("tabs.library"),
-            tabBarIcon:
-              Platform.OS === "android"
-                ? (_e) => require("@/assets/icons/server.rack.png")
-                : (_e) => ({ sfSymbol: "rectangle.stack.fill" }),
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name='server' color={color} size={size} />
+            ),
           }}
         />
-        <NativeTabs.Screen
-          name='(custom-links)'
-          options={{
-            title: t("tabs.custom_links"),
-            tabBarItemHidden: !settings?.showCustomMenuLinks,
-            tabBarIcon:
-              Platform.OS === "android"
-                ? (_e) => require("@/assets/icons/list.png")
-                : (_e) => ({ sfSymbol: "list.dash.fill" }),
-          }}
-        />
-      </NativeTabs>
+        {!!settings?.showCustomMenuLinks && (
+          <Tabs.Screen
+            name='(custom-links)'
+            options={{
+              title: t("tabs.custom_links"),
+              tabBarIcon: ({ color, size }) => (
+                <Ionicons name='menu' color={color} size={size} />
+              ),
+            }}
+          />
+        )}
+      </Tabs>
       <MiniPlayerBar />
       <MusicPlaybackEngine />
     </View>
