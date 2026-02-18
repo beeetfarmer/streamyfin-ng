@@ -25,7 +25,6 @@ const dependencies = {
           android: null,
         },
       },
-  "expo-notifications": disableForTV("expo-notifications"),
   "react-native-image-colors": disableForTV("react-native-image-colors"),
   "expo-sharing": disableForTV("expo-sharing"),
   "expo-haptics": disableForTV("expo-haptics"),

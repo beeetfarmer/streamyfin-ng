@@ -5,6 +5,7 @@ import type {
 } from "@jellyfin/sdk/lib/generated-client/models";
 import { BaseItemKind } from "@jellyfin/sdk/lib/generated-client/models/base-item-kind";
 import { getMediaInfoApi } from "@jellyfin/sdk/lib/utils/api";
+import { stripSensitiveQueryParams } from "@/utils/networkSecurity";
 import { generateDownloadProfile } from "@/utils/profiles/download";
 import type { AudioTranscodeModeType } from "@/utils/profiles/native";
 
@@ -46,8 +47,9 @@ const getPlaybackUrl = (
       );
     }
 
-    console.log("Video is being transcoded:", transcodeUrl);
-    return `${api.basePath}${transcodeUrl}`;
+    console.log("Video is being transcoded");
+    const transcodedStreamUrl = `${api.basePath}${transcodeUrl}`;
+    return stripSensitiveQueryParams(transcodedStreamUrl);
   }
 
   // Fall back to direct play
@@ -58,7 +60,6 @@ const getPlaybackUrl = (
     subtitleStreamIndex: params.subtitleStreamIndex?.toString() || "",
     audioStreamIndex: params.audioStreamIndex?.toString() || "",
     deviceId: params.deviceId || api.deviceInfo.id,
-    api_key: api.accessToken,
     startTimeTicks: params.startTimeTicks?.toString() || "0",
     maxStreamingBitrate: params.maxStreamingBitrate?.toString() || "",
     userId: params.userId,
@@ -71,7 +72,7 @@ const getPlaybackUrl = (
 
   const directPlayUrl = `${api.basePath}/Videos/${itemId}/stream?${streamParams.toString()}`;
 
-  console.log("Video is being direct played:", directPlayUrl);
+  console.log("Video is being direct played");
   return directPlayUrl;
 };
 

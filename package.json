@@ -17,6 +17,9 @@
     "ios:unsigned-build": "cross-env EXPO_TV=0 bun scripts/ios/build-ios.ts --production",
     "prepare": "husky",
     "typecheck": "node scripts/typecheck.js",
+    "security:check": "node scripts/security-check.js",
+    "security:android-manifest": "node scripts/check-android-manifest-security.js",
+    "security:audit": "bun audit --production",
     "check": "biome check . --max-diagnostics 1000",
     "lint": "biome check --write --unsafe --max-diagnostics 1000",
     "format": "biome format --write .",
@@ -41,7 +44,7 @@
     "@tanstack/react-pacer": "^0.19.1",
     "@tanstack/react-query": "5.90.20",
     "@tanstack/react-query-persist-client": "^5.90.18",
-    "axios": "^1.7.9",
+    "axios": "^1.13.5",
     "expo": "~54.0.31",
     "expo-application": "~7.0.8",
     "expo-asset": "~12.0.12",
@@ -60,7 +63,6 @@
     "expo-linking": "~8.0.11",
     "expo-localization": "~17.0.8",
     "expo-location": "^19.0.8",
-    "expo-notifications": "~0.32.16",
     "expo-router": "~6.0.21",
     "expo-screen-orientation": "~9.0.8",
     "expo-secure-store": "^15.0.8",
@@ -159,6 +161,16 @@
   "trustedDependencies": [
     "unrs-resolver"
   ],
+  "overrides": {
+    "ajv": "^8.18.0",
+    "axios": "^1.13.5",
+    "fast-xml-parser": "^5.3.6",
+    "glob": "^10.5.0",
+    "js-yaml": "^3.14.2",
+    "qs": "^6.14.1",
+    "tar": "^7.5.3",
+    "undici": "^6.23.0"
+  },
   "resolutions": {
     "expo-constants": "18.0.13"
   }

@@ -1,10 +1,7 @@
 import { getSessionApi } from "@jellyfin/sdk/lib/utils/api/session-api";
 import { useQuery } from "@tanstack/react-query";
 import { useAtom } from "jotai";
-import { Platform } from "react-native";
 import { apiAtom, userAtom } from "@/providers/JellyfinProvider";
-
-const _Notifications = !Platform.isTV ? require("expo-notifications") : null;
 
 export interface useSessionsProps {
   refetchInterval: number;

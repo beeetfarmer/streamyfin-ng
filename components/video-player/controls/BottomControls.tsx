@@ -44,6 +44,7 @@ interface BottomControlsProps {
     x: number;
     y: number;
     url: string;
+    headers?: Record<string, string>;
   } | null;
   trickplayInfo: {
     aspectRatio?: number;

@@ -73,3 +73,6 @@ modules/background-downloader/android/build/*
 
 # ios:unsigned-build Artifacts
 build/
+
+# Local Security Notes
+security.md

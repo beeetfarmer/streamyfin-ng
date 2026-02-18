@@ -68,7 +68,7 @@ const SliderScrubber: React.FC<SliderScrubberProps> = ({
           if (!trickPlayUrl || !trickplayInfo) {
             return null;
           }
-          const { x, y, url } = trickPlayUrl;
+          const { x, y, url, headers } = trickPlayUrl;
 
           const tileWidth = 150;
           const tileHeight = 150 / trickplayInfo.aspectRatio!;
@@ -98,7 +98,7 @@ const SliderScrubber: React.FC<SliderScrubberProps> = ({
                     { translateY: -y * tileHeight },
                   ],
                 }}
-                source={{ uri: url }}
+                source={{ uri: url, headers }}
                 contentFit='cover'
               />
               <Text

@@ -10,6 +10,11 @@ export interface TrickplayInfo {
   totalImageSheets: number;
 }
 
+export interface TrickplayRequestConfig {
+  url: string;
+  headers: Record<string, string>;
+}
+
 /**
  * Parses the trickplay metadata from a BaseItemDto.
  * @param item The Jellyfin media item.
@@ -58,8 +63,21 @@ export const getTrickplayInfo = (item: BaseItemDto): TrickplayInfo | null => {
 
 /** Generates a trickplay URL based on the item, resolution, and sheet index. */
 export const generateTrickplayUrl = (item: BaseItemDto, sheetIndex: number) => {
+  return getTrickplayRequestConfig(item, sheetIndex)?.url ?? null;
+};
+
+export const getTrickplayRequestConfig = (
+  item: BaseItemDto,
+  sheetIndex: number,
+): TrickplayRequestConfig | null => {
   const api = store.get(apiAtom);
   const resolution = getTrickplayInfo(item)?.resolution;
   if (!resolution || !api) return null;
-  return `${api.basePath}/Videos/${item.Id}/Trickplay/${resolution}/${sheetIndex}.jpg?api_key=${api.accessToken}`;
+  return {
+    url: `${api.basePath}/Videos/${item.Id}/Trickplay/${resolution}/${sheetIndex}.jpg`,
+    headers: {
+      Authorization: `MediaBrowser Token="${api.accessToken}"`,
+      "X-Emby-Token": api.accessToken,
+    },
+  };
 };

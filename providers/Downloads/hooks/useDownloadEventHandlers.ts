@@ -10,6 +10,7 @@ import type {
   DownloadStartedEvent,
 } from "@/modules";
 import { BackgroundDownloader } from "@/modules";
+import { stripSensitiveQueryParams } from "@/utils/networkSecurity";
 import { addDownloadedItem } from "../database";
 import {
   getNotificationContent,
@@ -59,13 +60,16 @@ export function useDownloadEventHandlers({
         // If no mapping exists, find by URL (for queued downloads)
         if (!processId && event.url) {
           // Check if we have a URL mapping (queued download)
-          const urlKey = event.url;
-          processId = taskMapRef.current.get(urlKey);
+          const rawUrlKey = event.url;
+          const sanitizedUrlKey = stripSensitiveQueryParams(event.url);
+          processId =
+            taskMapRef.current.get(rawUrlKey) ||
+            taskMapRef.current.get(sanitizedUrlKey);
 
           if (!processId) {
             // Fallback: search by matching URL in processes
             const matchingProcess = processes.find(
-              (p) => p.inputUrl === event.url,
+              (p) => p.inputUrl === sanitizedUrlKey,
             );
             if (matchingProcess) {
               processId = matchingProcess.id;
@@ -75,7 +79,8 @@ export function useDownloadEventHandlers({
           if (processId) {
             // Create taskId mapping and remove URL mapping
             taskMapRef.current.set(event.taskId, processId);
-            taskMapRef.current.delete(urlKey);
+            taskMapRef.current.delete(rawUrlKey);
+            taskMapRef.current.delete(sanitizedUrlKey);
             console.log(
               `[DPL] Mapped queued download: taskId=${event.taskId} to processId=${processId.slice(0, 8)}...`,
             );
@@ -86,7 +91,7 @@ export function useDownloadEventHandlers({
           updateProcess(processId, { startTime: new Date() });
         } else {
           console.warn(
-            `[DPL] Started event for unknown download: taskId=${event.taskId}, url=${event.url}`,
+            `[DPL] Started event for unknown download: taskId=${event.taskId}`,
           );
         }
       },

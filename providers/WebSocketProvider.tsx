@@ -14,6 +14,10 @@ import { AppState, type AppStateStatus } from "react-native";
 import useRouter from "@/hooks/useAppRouter";
 import { apiAtom, getOrSetDeviceId } from "@/providers/JellyfinProvider";
 import { useNetworkStatus } from "@/providers/NetworkStatusProvider";
+import {
+  isHttpUrl,
+  isInsecureHttpAllowedForUrl,
+} from "@/utils/networkSecurity";
 
 interface WebSocketMessage {
   MessageType: string;
@@ -52,14 +56,26 @@ export const WebSocketProvider = ({ children }: WebSocketProviderProps) => {
       return;
     }
 
-    const protocol = api.basePath.includes("https") ? "wss" : "ws";
+    const insecureHttp = isHttpUrl(api.basePath);
+    if (insecureHttp && !isInsecureHttpAllowedForUrl(api.basePath)) {
+      console.warn(
+        "Blocked insecure ws:// connection for unapproved server host",
+      );
+      setIsConnected(false);
+      return;
+    }
+
+    const protocol = insecureHttp ? "ws" : "wss";
     const url = `${protocol}://${api.basePath
       .replace("https://", "")
-      .replace("http://", "")}/socket?api_key=${
-      api.accessToken
-    }&deviceId=${deviceId}`;
+      .replace("http://", "")}/socket?deviceId=${encodeURIComponent(deviceId)}`;
 
-    const newWebSocket = new WebSocket(url);
+    const newWebSocket = new WebSocket(url, undefined, {
+      headers: {
+        Authorization: `MediaBrowser Token="${api.accessToken}"`,
+        "X-Emby-Token": api.accessToken,
+      },
+    });
     let keepAliveInterval: ReturnType<typeof setInterval> | null = null;
 
     const maxReconnectAttempts = 5;

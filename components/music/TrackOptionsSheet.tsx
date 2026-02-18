@@ -177,6 +177,7 @@ export const TrackOptionsSheet: React.FC<Props> = ({
         await downloadTrack(track.Id, result.url, {
           permanent: true,
           container: result.mediaSource?.Container || undefined,
+          headers: result.headers,
         });
       }
     } catch {

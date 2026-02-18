@@ -13,6 +13,10 @@ import useImageStorage from "@/hooks/useImageStorage";
 import { BackgroundDownloader } from "@/modules";
 import { getOrSetDeviceId } from "@/utils/device";
 import useDownloadHelper from "@/utils/download";
+import {
+  getSafeUrlForLogs,
+  stripSensitiveQueryParams,
+} from "@/utils/networkSecurity";
 import { downloadAdditionalAssets } from "../additionalDownloads";
 import {
   clearAllDownloadedItems,
@@ -69,6 +73,10 @@ export function useDownloadOperations({
       try {
         const deviceId = getOrSetDeviceId();
         const processId = item.Id;
+        const downloadHeaders = {
+          Authorization: `MediaBrowser Token="${authHeader}"`,
+          "X-Emby-Token": authHeader,
+        };
 
         // Check if already downloading
         const existingProcess = processes.find((p) => p.id === processId);
@@ -101,9 +109,10 @@ export function useDownloadOperations({
         }
 
         // Create job status with pre-downloaded assets
+        const sanitizedDownloadUrl = stripSensitiveQueryParams(downloadUrl);
         const jobStatus: JobStatus = {
           id: processId,
-          inputUrl: downloadUrl,
+          inputUrl: sanitizedDownloadUrl,
           item,
           itemId: item.Id,
           deviceId,
@@ -129,12 +138,15 @@ export function useDownloadOperations({
         const destinationPath = uriToFilePath(videoFile.uri);
 
         console.log(`[DOWNLOAD] Starting video: ${item.Name}`);
-        console.log(`[DOWNLOAD] Download URL: ${downloadUrl}`);
+        console.log(
+          `[DOWNLOAD] Download URL: ${getSafeUrlForLogs(downloadUrl)}`,
+        );
 
         // Start the download using enqueueDownload for sequential processing
         const taskId = await BackgroundDownloader.enqueueDownload(
           downloadUrl,
           destinationPath,
+          downloadHeaders,
         );
 
         // Map task ID or URL for later cancellation

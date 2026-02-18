@@ -1,5 +1,6 @@
 import type { Api } from "@jellyfin/sdk";
 import { getMediaInfoApi } from "@jellyfin/sdk/lib/utils/api";
+import { stripSensitiveQueryParams } from "@/utils/networkSecurity";
 
 /**
  * Retrieves the playback URL for the given item ID and user ID.
@@ -29,7 +30,10 @@ export const getPlaybackUrl = async (
   const mediaSource = mediaSources[0];
   const transcodeUrl = mediaSource.TranscodingUrl;
   if (transcodeUrl) {
-    return transcodeUrl;
+    const absoluteTranscodeUrl = transcodeUrl.startsWith("http")
+      ? transcodeUrl
+      : `${api.basePath}${transcodeUrl}`;
+    return stripSensitiveQueryParams(absoluteTranscodeUrl);
   }
 
   // Construct a fallback URL if the TranscodingUrl is not available
@@ -40,7 +44,6 @@ export const getPlaybackUrl = async (
 
   const queryParams = new URLSearchParams({
     deviceId: api.deviceInfo?.id || "",
-    api_key: api.accessToken || "",
     Tag: ETag || "",
     MediaSourceId: Id || "",
   });

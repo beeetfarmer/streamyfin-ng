@@ -84,6 +84,9 @@ jobs:
           EXPO_TV: 0
         run: bun run build:android:local
 
+      - name: 🔐 Validate merged Android manifest
+        run: bun run security:android-manifest
+
       - name: 📅 Set date tag
         run: echo "DATE_TAG=$(date +%d-%m-%Y_%H-%M-%S)" >> $GITHUB_ENV
 
@@ -166,6 +169,9 @@ jobs:
         env:
           EXPO_TV: 1
         run: bun run build:android:local
+
+      - name: 🔐 Validate merged Android manifest
+        run: bun run security:android-manifest
 
       - name: 📅 Set date tag
         run: echo "DATE_TAG=$(date +%d-%m-%Y_%H-%M-%S)" >> $GITHUB_ENV

@@ -62,6 +62,19 @@ export const PreviousServersList: React.FC<PreviousServersListProps> = ({
     setPreviousServers(JSON.stringify(servers));
   };
 
+  const showLoginError = (error: unknown, server: SavedServer) => {
+    if (error instanceof Error && error.message) {
+      Alert.alert(t("login.connection_failed"), error.message, [
+        { text: t("common.ok"), onPress: () => onServerSelect(server) },
+      ]);
+      return;
+    }
+
+    Alert.alert(t("server.session_expired"), t("server.please_login_again"), [
+      { text: t("common.ok"), onPress: () => onServerSelect(server) },
+    ]);
+  };
+
   const handleAccountLogin = async (
     server: SavedServer,
     account: SavedServerAccount,
@@ -73,12 +86,8 @@ export const PreviousServersList: React.FC<PreviousServersListProps> = ({
           setLoadingServer(server.address);
           try {
             await onQuickLogin(server.address, account.userId);
-          } catch {
-            Alert.alert(
-              t("server.session_expired"),
-              t("server.please_login_again"),
-              [{ text: t("common.ok"), onPress: () => onServerSelect(server) }],
-            );
+          } catch (error) {
+            showLoginError(error, server);
           } finally {
             setLoadingServer(null);
           }
@@ -122,17 +131,8 @@ export const PreviousServersList: React.FC<PreviousServersListProps> = ({
       setLoadingServer(selectedServer.address);
       try {
         await onQuickLogin(selectedServer.address, selectedAccount.userId);
-      } catch {
-        Alert.alert(
-          t("server.session_expired"),
-          t("server.please_login_again"),
-          [
-            {
-              text: t("common.ok"),
-              onPress: () => onServerSelect(selectedServer),
-            },
-          ],
-        );
+      } catch (error) {
+        showLoginError(error, selectedServer);
       } finally {
         setLoadingServer(null);
         setSelectedAccount(null);

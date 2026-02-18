@@ -4,7 +4,7 @@ import { Image } from "expo-image";
 import { useLocalSearchParams, useNavigation } from "expo-router";
 import { t } from "i18next";
 import { useAtomValue } from "jotai";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   Keyboard,
@@ -24,6 +24,14 @@ import { PreviousServersList } from "@/components/PreviousServersList";
 import { SaveAccountModal } from "@/components/SaveAccountModal";
 import { Colors } from "@/constants/Colors";
 import { apiAtom, useJellyfin } from "@/providers/JellyfinProvider";
+import {
+  allowInsecureHttpForUrl,
+  forceProtocol,
+  getServerHost,
+  isHttpUrl,
+  isInsecureHttpAllowedForUrl,
+  normalizeServerUrl,
+} from "@/utils/networkSecurity";
 import type {
   AccountSecurityType,
   SavedServer,
@@ -36,7 +44,8 @@ const CredentialsSchema = z.object({
 const Login: React.FC = () => {
   const api = useAtomValue(apiAtom);
   const navigation = useNavigation();
-  const params = useLocalSearchParams();
+  const params =
+    useLocalSearchParams<Record<string, string | string[] | undefined>>();
   const {
     setServer,
     login,
@@ -46,22 +55,26 @@ const Login: React.FC = () => {
     loginWithPassword,
   } = useJellyfin();
 
-  const {
-    apiUrl: _apiUrl,
-    username: _username,
-    password: _password,
-  } = params as { apiUrl: string; username: string; password: string };
+  const deepLinkApiUrl = Array.isArray(params.apiUrl)
+    ? params.apiUrl[0]
+    : params.apiUrl;
+  const deepLinkUsername = Array.isArray(params.username)
+    ? params.username[0]
+    : params.username;
+  const deepLinkPassword = Array.isArray(params.password)
+    ? params.password[0]
+    : params.password;
 
   const [loadingServerCheck, setLoadingServerCheck] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
-  const [serverURL, setServerURL] = useState<string>(_apiUrl || "");
+  const [serverURL, setServerURL] = useState<string>(deepLinkApiUrl || "");
   const [serverName, setServerName] = useState<string>("");
   const [credentials, setCredentials] = useState<{
     username: string;
     password: string;
   }>({
-    username: _username || "",
-    password: _password || "",
+    username: "",
+    password: "",
   });
 
   // Save account state
@@ -71,27 +84,54 @@ const Login: React.FC = () => {
     username: string;
     password: string;
   } | null>(null);
+  const deepLinkNoticeShownRef = useRef(false);
 
-  /**
-   * A way to auto login based on a link
-   */
+  // Deep links can prefill server URL only. Credential parameters are ignored.
   useEffect(() => {
-    (async () => {
-      if (_apiUrl) {
-        await setServer({
-          address: _apiUrl,
-        });
+    if (deepLinkNoticeShownRef.current) {
+      return;
+    }
 
-        // Wait for server setup and state updates to complete
-        setTimeout(() => {
-          if (_username && _password) {
-            setCredentials({ username: _username, password: _password });
-            login(_username, _password);
-          }
-        }, 0);
+    let hasShownNotice = false;
+
+    if (!deepLinkApiUrl) {
+    } else {
+      const normalized = normalizeServerUrl(deepLinkApiUrl);
+      if (normalized) {
+        setServerURL(normalized);
+      } else {
+        Alert.alert(
+          t("login.connection_failed"),
+          "Invalid deep link server URL.",
+        );
+        hasShownNotice = true;
       }
-    })();
-  }, [_apiUrl, _username, _password]);
+    }
+
+    if (deepLinkUsername || deepLinkPassword) {
+      Alert.alert(
+        "Security notice",
+        "Credential parameters in deep links are blocked. Enter credentials in the app instead.",
+      );
+      hasShownNotice = true;
+    }
+
+    const allowedParams = new Set(["apiUrl"]);
+    const unexpectedParams = Object.keys(params).filter(
+      (key) => !allowedParams.has(key),
+    );
+    if (unexpectedParams.length > 0) {
+      Alert.alert(
+        "Security notice",
+        "Unsupported deep link parameters were ignored.",
+      );
+      hasShownNotice = true;
+    }
+
+    if (hasShownNotice) {
+      deepLinkNoticeShownRef.current = true;
+    }
+  }, [deepLinkApiUrl, deepLinkUsername, deepLinkPassword, params]);
 
   useEffect(() => {
     navigation.setOptions({
@@ -190,105 +230,183 @@ const Login: React.FC = () => {
 
   const handleAddAccount = (server: SavedServer) => {
     // Server is already selected, go to credential entry
-    setServer({ address: server.address });
-    if (server.name) {
-      setServerName(server.name);
-    }
-  };
-
-  /**
-   * Checks the availability and validity of a Jellyfin server URL.
-   *
-   * This function attempts to connect to a Jellyfin server using the provided URL.
-   * It tries both HTTPS and HTTP protocols, with a timeout to handle long 404 responses.
-   *
-   * @param {string} url - The base URL of the Jellyfin server to check.
-   * @returns {Promise<string | undefined>} A Promise that resolves to:
-   *   - The full URL (including protocol) if a valid Jellyfin server is found.
-   *   - undefined if no valid server is found at the given URL.
-   *
-   * Side effects:
-   * - Sets loadingServerCheck state to true at the beginning and false at the end.
-   * - Logs errors and timeout information to the console.
-   */
-  const checkUrl = useCallback(async (url: string) => {
-    setLoadingServerCheck(true);
-    const baseUrl = url.replace(/^https?:\/\//i, "");
-    const protocols = ["https", "http"];
-    try {
-      return checkHttp(baseUrl, protocols);
-    } catch (e) {
-      if (e instanceof Error && e.message === "Server too old") {
-        throw e;
-      }
-      return undefined;
-    } finally {
-      setLoadingServerCheck(false);
-    }
-  }, []);
-
-  async function checkHttp(baseUrl: string, protocols: string[]) {
-    for (const protocol of protocols) {
+    (async () => {
       try {
-        const response = await fetch(
-          `${protocol}://${baseUrl}/System/Info/Public`,
-          {
-            mode: "cors",
-          },
-        );
-        if (response.ok) {
-          const data = (await response.json()) as PublicSystemInfo;
-          const serverVersion = data.Version?.split(".");
-          if (serverVersion && +serverVersion[0] <= 10) {
-            if (+serverVersion[1] < 10) {
-              Alert.alert(
-                t("login.too_old_server_text"),
-                t("login.too_old_server_description"),
-              );
-              throw new Error("Server too old");
-            }
-          }
-          setServerName(data.ServerName || "");
-          return `${protocol}://${baseUrl}`;
+        await setServer({ address: server.address });
+        if (server.name) {
+          setServerName(server.name);
         }
-      } catch (e) {
-        if (e instanceof Error && e.message === "Server too old") {
-          throw e;
-        }
-      }
-    }
-    return undefined;
-  }
-  /**
-   * Handles the connection attempt to a Jellyfin server.
-   *
-   * This function trims the input URL, checks its validity using the `checkUrl` function,
-   * and sets the server address if a valid connection is established.
-   *
-   * @param {string} url - The URL of the Jellyfin server to connect to.
-   *
-   * @returns {Promise<void>}
-   *
-   * Side effects:
-   * - Calls `checkUrl` to validate the server URL.
-   * - Shows an alert if the connection fails.
-   * - Sets the server address using `setServer` if the connection is successful.
-   *
-   */
-  const handleConnect = useCallback(async (url: string) => {
-    url = url.trim().replace(/\/$/, "");
-    try {
-      const result = await checkUrl(url);
-      if (result === undefined) {
+      } catch (error) {
         Alert.alert(
           t("login.connection_failed"),
-          t("login.could_not_connect_to_server"),
+          error instanceof Error
+            ? error.message
+            : t("login.an_unexpected_error_occured"),
         );
-        return;
       }
-      await setServer({ address: result });
-    } catch {}
+    })();
+  };
+
+  const confirmInsecureHttpForServer = useCallback((httpUrl: string) => {
+    const host = getServerHost(httpUrl) ?? httpUrl;
+    return new Promise<boolean>((resolve) => {
+      let settled = false;
+      const finalize = (value: boolean) => {
+        if (settled) return;
+        settled = true;
+        resolve(value);
+      };
+
+      Alert.alert(
+        "Allow insecure HTTP?",
+        `The server ${host} is only reachable over HTTP. This is less secure and can expose your traffic to interception.\n\nAllow insecure HTTP for this server?`,
+        [
+          { text: "Cancel", style: "cancel", onPress: () => finalize(false) },
+          {
+            text: "Allow for this server",
+            style: "destructive",
+            onPress: () => finalize(true),
+          },
+        ],
+        { cancelable: true, onDismiss: () => finalize(false) },
+      );
+    });
   }, []);
+
+  const checkServerAtUrl = useCallback(
+    async (serverUrl: string) => {
+      try {
+        const response = await fetch(`${serverUrl}/System/Info/Public`, {
+          mode: "cors",
+        });
+        if (!response.ok) {
+          return undefined;
+        }
+
+        const data = (await response.json()) as PublicSystemInfo;
+        const serverVersion = data.Version?.split(".");
+        if (
+          serverVersion &&
+          +serverVersion[0] <= 10 &&
+          +serverVersion[1] < 10
+        ) {
+          Alert.alert(
+            t("login.too_old_server_text"),
+            t("login.too_old_server_description"),
+          );
+          throw new Error("Server too old");
+        }
+
+        setServerName(data.ServerName || "");
+        return serverUrl;
+      } catch (error) {
+        if (error instanceof Error && error.message === "Server too old") {
+          throw error;
+        }
+        return undefined;
+      }
+    },
+    [t],
+  );
+
+  const resolveServerUrl = useCallback(
+    async (rawUrl: string) => {
+      setLoadingServerCheck(true);
+      try {
+        const trimmed = rawUrl.trim().replace(/\/$/, "");
+        const hasExplicitProtocol = /^https?:\/\//i.test(trimmed);
+        const normalized = normalizeServerUrl(trimmed);
+        if (!normalized) {
+          return undefined;
+        }
+
+        if (hasExplicitProtocol) {
+          const explicitUrl = isHttpUrl(normalized)
+            ? forceProtocol(normalized, "http")
+            : forceProtocol(normalized, "https");
+
+          if (!explicitUrl) {
+            return undefined;
+          }
+
+          if (
+            isHttpUrl(explicitUrl) &&
+            !isInsecureHttpAllowedForUrl(explicitUrl)
+          ) {
+            const approved = await confirmInsecureHttpForServer(explicitUrl);
+            if (!approved) {
+              return undefined;
+            }
+            allowInsecureHttpForUrl(explicitUrl);
+          }
+
+          return checkServerAtUrl(explicitUrl);
+        }
+
+        const httpsUrl = forceProtocol(normalized, "https");
+        if (!httpsUrl) {
+          return undefined;
+        }
+
+        const httpsResult = await checkServerAtUrl(httpsUrl);
+        if (httpsResult) {
+          return httpsResult;
+        }
+
+        const httpUrl = forceProtocol(normalized, "http");
+        if (!httpUrl) {
+          return undefined;
+        }
+
+        const httpResult = await checkServerAtUrl(httpUrl);
+        if (!httpResult) {
+          return undefined;
+        }
+
+        if (isInsecureHttpAllowedForUrl(httpResult)) {
+          return httpResult;
+        }
+
+        const approved = await confirmInsecureHttpForServer(httpResult);
+        if (!approved) {
+          return undefined;
+        }
+
+        allowInsecureHttpForUrl(httpResult);
+        return httpResult;
+      } finally {
+        setLoadingServerCheck(false);
+      }
+    },
+    [checkServerAtUrl, confirmInsecureHttpForServer],
+  );
+  /**
+   * Handles connection to a Jellyfin server with HTTPS-first resolution.
+   * HTTP is only allowed when explicitly approved for the server host.
+   */
+  const handleConnect = useCallback(
+    async (url: string) => {
+      try {
+        const result = await resolveServerUrl(url);
+        if (result === undefined) {
+          Alert.alert(
+            t("login.connection_failed"),
+            t("login.could_not_connect_to_server"),
+          );
+          return;
+        }
+        await setServer({ address: result });
+      } catch (error) {
+        Alert.alert(
+          t("login.connection_failed"),
+          error instanceof Error
+            ? error.message
+            : t("login.an_unexpected_error_occured"),
+        );
+      }
+    },
+    [resolveServerUrl, setServer],
+  );
 
   const handleQuickConnect = async () => {
     try {

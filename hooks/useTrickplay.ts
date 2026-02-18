@@ -5,8 +5,8 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { useDownload } from "@/providers/DownloadProvider";
 import { ticksToMs } from "@/utils/time";
 import {
-  generateTrickplayUrl,
   getTrickplayInfo,
+  getTrickplayRequestConfig,
   type TrickplayInfo,
 } from "@/utils/trickplay";
 
@@ -14,6 +14,7 @@ interface TrickplayUrl {
   x: number;
   y: number;
   url: string;
+  headers?: Record<string, string>;
 }
 
 /** Hook to handle trickplay logic for a given item. */
@@ -32,11 +33,14 @@ export const useTrickplay = (item: BaseItemDto) => {
       // If we are offline, we can use the downloaded item's trickplay data path
       const downloadedItem = getDownloadedItemById(item.Id!);
       if (isOffline && downloadedItem?.trickPlayData?.path) {
-        return `${downloadedItem.trickPlayData.path}${sheetIndex}.jpg`;
+        return {
+          url: `${downloadedItem.trickPlayData.path}${sheetIndex}.jpg`,
+          headers: undefined,
+        };
       }
-      return generateTrickplayUrl(item, sheetIndex);
+      return getTrickplayRequestConfig(item, sheetIndex);
     },
-    [trickplayInfo, isOffline, getDownloadedItemById],
+    [isOffline, getDownloadedItemById],
   );
 
   /** Calculates the trickplay URL for the current progress. */
@@ -54,8 +58,15 @@ export const useTrickplay = (item: BaseItemDto) => {
         progress,
         trickplayInfo,
       );
-      const url = getTrickplayUrl(item, sheetIndex);
-      if (url) setTrickPlayUrl({ x, y, url });
+      const requestConfig = getTrickplayUrl(item, sheetIndex);
+      if (requestConfig) {
+        setTrickPlayUrl({
+          x,
+          y,
+          url: requestConfig.url,
+          headers: requestConfig.headers,
+        });
+      }
     },
     [trickplayInfo, item, throttleDelay, getTrickplayUrl],
   );
@@ -67,14 +78,15 @@ export const useTrickplay = (item: BaseItemDto) => {
     const total = trickplayInfo.totalImageSheets;
     const urls: string[] = [];
     for (let index = 0; index < total; index++) {
-      const url = getTrickplayUrl(item, index);
-      if (url) urls.push(url);
+      const requestConfig = getTrickplayUrl(item, index);
+      if (requestConfig) urls.push(requestConfig.url);
     }
+    const headers = getTrickplayRequestConfig(item, 0)?.headers;
     for (let i = 0; i < urls.length; i += maxConcurrent) {
       const batch = urls.slice(i, i + maxConcurrent);
       await Promise.all(
         batch.map(
-          (url) => Image.prefetch(url).catch(() => {}), // Ignore errors
+          (url) => Image.prefetch(url, { headers }).catch(() => {}), // Ignore errors
         ),
       );
       // Yield to the event loop between batches to avoid blocking

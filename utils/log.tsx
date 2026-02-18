@@ -13,6 +13,40 @@ interface LogEntry {
   data?: any;
 }
 
+const MAX_SANITIZE_DEPTH = 4;
+const SENSITIVE_KEY_PATTERN =
+  /(token|password|authorization|cookie|secret|api[_-]?key|session)/i;
+
+const sanitizeString = (input: string): string =>
+  input
+    .replace(
+      /([?&](api_key|access_token|token|authorization|auth)=)[^&]*/gi,
+      "$1[REDACTED]",
+    )
+    .replace(/(bearer\s+)[a-z0-9\-_.=]+/gi, "$1[REDACTED]")
+    .replace(/(token"?\s*[:=]\s*")([^"]+)/gi, "$1[REDACTED]");
+
+const sanitizeLogData = (value: any, depth = 0): any => {
+  if (value == null || depth > MAX_SANITIZE_DEPTH) return value;
+
+  if (typeof value === "string") return sanitizeString(value);
+  if (typeof value !== "object") return value;
+
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeLogData(item, depth + 1));
+  }
+
+  const sanitized: Record<string, any> = {};
+  for (const [key, itemValue] of Object.entries(value)) {
+    if (SENSITIVE_KEY_PATTERN.test(key)) {
+      sanitized[key] = "[REDACTED]";
+      continue;
+    }
+    sanitized[key] = sanitizeLogData(itemValue, depth + 1);
+  }
+  return sanitized;
+};
+
 const mmkvStorage = createJSONStorage(() => ({
   getItem: (key: string) => storage.getString(key) || null,
   setItem: (key: string, value: string) => storage.set(key, value),
@@ -40,11 +74,13 @@ function useLogProvider() {
 }
 
 export const writeToLog = (level: LogLevel, message: string, data?: any) => {
+  const sanitizedMessage = sanitizeString(message);
+  const sanitizedData = sanitizeLogData(data);
   const newEntry: LogEntry = {
     timestamp: new Date().toISOString(),
     level: level,
-    message: message,
-    data: data,
+    message: sanitizedMessage,
+    data: sanitizedData,
   };
 
   const currentLogs = storage.getString("logs");

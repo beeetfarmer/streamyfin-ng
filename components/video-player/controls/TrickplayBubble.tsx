@@ -9,6 +9,7 @@ interface TrickplayBubbleProps {
     x: number;
     y: number;
     url: string;
+    headers?: Record<string, string>;
   } | null;
   trickplayInfo: {
     aspectRatio?: number;
@@ -33,7 +34,7 @@ export const TrickplayBubble: FC<TrickplayBubbleProps> = ({
     return null;
   }
 
-  const { x, y, url } = trickPlayUrl;
+  const { x, y, url, headers } = trickPlayUrl;
   const tileWidth = CONTROLS_CONSTANTS.TILE_WIDTH;
   const tileHeight = tileWidth / trickplayInfo.aspectRatio!;
 
@@ -72,7 +73,7 @@ export const TrickplayBubble: FC<TrickplayBubbleProps> = ({
               { translateY: -y * tileHeight },
             ],
           }}
-          source={{ uri: url }}
+          source={{ uri: url, headers }}
           contentFit='cover'
         />
       </View>

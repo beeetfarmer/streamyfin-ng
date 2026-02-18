@@ -28,6 +28,11 @@ import { useSettings } from "@/utils/atoms/settings";
 import { writeErrorLog, writeInfoLog } from "@/utils/log";
 import { storage } from "@/utils/mmkv";
 import {
+  isHttpUrl,
+  isInsecureHttpAllowedForUrl,
+  normalizeServerUrl,
+} from "@/utils/networkSecurity";
+import {
   type AccountSecurityType,
   addServerToList,
   deleteAccountCredential,
@@ -37,6 +42,11 @@ import {
   saveAccountCredential,
   updateAccountToken,
 } from "@/utils/secureCredentials";
+import {
+  clearSessionToken,
+  getSessionToken,
+  setSessionToken,
+} from "@/utils/sessionToken";
 import { store } from "@/utils/store";
 
 interface Server {
@@ -81,6 +91,23 @@ interface JellyfinContextValue {
 const JellyfinContext = createContext<JellyfinContextValue | undefined>(
   undefined,
 );
+
+const INSECURE_HTTP_BLOCKED_MESSAGE =
+  "Insecure HTTP is not enabled for this server. Connect from login and allow insecure HTTP for this host first.";
+
+function validateServerAddress(address: string): string {
+  const normalizedAddress = normalizeServerUrl(address);
+  if (!normalizedAddress) {
+    throw new Error("Invalid server URL");
+  }
+  if (
+    isHttpUrl(normalizedAddress) &&
+    !isInsecureHttpAllowedForUrl(normalizedAddress)
+  ) {
+    throw new Error(INSECURE_HTTP_BLOCKED_MESSAGE);
+  }
+  return normalizedAddress;
+}
 
 export const JellyfinProvider: React.FC<{ children: ReactNode }> = ({
   children,
@@ -171,7 +198,8 @@ export const JellyfinProvider: React.FC<{ children: ReactNode }> = ({
           const { AccessToken, User } = authResponse.data;
           setUser(User);
           setApi(jellyfin.createApi(api.basePath, AccessToken));
-          storage.set("token", AccessToken);
+          await setSessionToken(AccessToken);
+          storage.remove("token");
           storage.set("user", JSON.stringify(User));
           return true;
         }
@@ -219,16 +247,18 @@ export const JellyfinProvider: React.FC<{ children: ReactNode }> = ({
 
   const setServerMutation = useMutation({
     mutationFn: async (server: Server) => {
-      const apiInstance = jellyfin?.createApi(server.address);
+      const normalizedAddress = validateServerAddress(server.address);
+      const apiInstance = jellyfin?.createApi(normalizedAddress);
 
       if (!apiInstance?.basePath) throw new Error("Failed to connect");
 
       setApi(apiInstance);
-      storage.set("serverUrl", server.address);
+      storage.set("serverUrl", normalizedAddress);
+      return normalizedAddress;
     },
-    onSuccess: async (_, server) => {
+    onSuccess: async (serverUrl) => {
       // Add server to the list (will update existing or add new)
-      addServerToList(server.address);
+      addServerToList(serverUrl);
     },
     onError: (error) => {
       console.error("Failed to set server:", error);
@@ -266,7 +296,8 @@ export const JellyfinProvider: React.FC<{ children: ReactNode }> = ({
           setUser(auth.data.User);
           storage.set("user", JSON.stringify(auth.data.User));
           setApi(jellyfin.createApi(api?.basePath, auth.data?.AccessToken));
-          storage.set("token", auth.data?.AccessToken);
+          await setSessionToken(auth.data.AccessToken);
+          storage.remove("token");
 
           // Save credentials to secure storage if requested
           if (api.basePath && options?.saveAccount) {
@@ -346,6 +377,7 @@ export const JellyfinProvider: React.FC<{ children: ReactNode }> = ({
         );
 
       storage.remove("token");
+      await clearSessionToken();
       setUser(null);
       setApi(null);
       setPluginSettings(undefined);
@@ -366,14 +398,21 @@ export const JellyfinProvider: React.FC<{ children: ReactNode }> = ({
       userId: string;
     }) => {
       if (!jellyfin) throw new Error("Jellyfin not initialized");
+      const normalizedServerUrl = validateServerAddress(serverUrl);
 
-      const credential = await getAccountCredential(serverUrl, userId);
+      const credential = await getAccountCredential(
+        normalizedServerUrl,
+        userId,
+      );
       if (!credential) {
         throw new Error("No saved credential found");
       }
 
       // Create API instance with saved token
-      const apiInstance = jellyfin.createApi(serverUrl, credential.token);
+      const apiInstance = jellyfin.createApi(
+        normalizedServerUrl,
+        credential.token,
+      );
       if (!apiInstance) {
         throw new Error("Failed to create API instance");
       }
@@ -385,8 +424,9 @@ export const JellyfinProvider: React.FC<{ children: ReactNode }> = ({
         // Token is valid, update state
         setApi(apiInstance);
         setUser(response.data);
-        storage.set("serverUrl", serverUrl);
-        storage.set("token", credential.token);
+        storage.set("serverUrl", normalizedServerUrl);
+        await setSessionToken(credential.token);
+        storage.remove("token");
         storage.set("user", JSON.stringify(response.data));
 
         // Refresh plugin settings
@@ -397,7 +437,7 @@ export const JellyfinProvider: React.FC<{ children: ReactNode }> = ({
           axios.isAxiosError(error) &&
           (error.response?.status === 401 || error.response?.status === 403)
         ) {
-          await deleteAccountCredential(serverUrl, userId);
+          await deleteAccountCredential(normalizedServerUrl, userId);
           throw new Error(t("server.session_expired"));
         }
         throw error;
@@ -419,9 +459,10 @@ export const JellyfinProvider: React.FC<{ children: ReactNode }> = ({
       password: string;
     }) => {
       if (!jellyfin) throw new Error("Jellyfin not initialized");
+      const normalizedServerUrl = validateServerAddress(serverUrl);
 
       // Create API instance for the server
-      const apiInstance = jellyfin.createApi(serverUrl);
+      const apiInstance = jellyfin.createApi(normalizedServerUrl);
       if (!apiInstance) {
         throw new Error("Failed to create API instance");
       }
@@ -432,13 +473,14 @@ export const JellyfinProvider: React.FC<{ children: ReactNode }> = ({
       if (auth.data.AccessToken && auth.data.User) {
         setUser(auth.data.User);
         storage.set("user", JSON.stringify(auth.data.User));
-        setApi(jellyfin.createApi(serverUrl, auth.data.AccessToken));
-        storage.set("serverUrl", serverUrl);
-        storage.set("token", auth.data.AccessToken);
+        setApi(jellyfin.createApi(normalizedServerUrl, auth.data.AccessToken));
+        storage.set("serverUrl", normalizedServerUrl);
+        await setSessionToken(auth.data.AccessToken);
+        storage.remove("token");
 
         // Update the saved credential with new token
         await updateAccountToken(
-          serverUrl,
+          normalizedServerUrl,
           auth.data.User.Id || "",
           auth.data.AccessToken,
         );
@@ -471,8 +513,15 @@ export const JellyfinProvider: React.FC<{ children: ReactNode }> = ({
   const switchServerUrl = useCallback(
     (newUrl: string) => {
       if (!jellyfin || !api?.accessToken) return;
+      let normalizedNewUrl: string;
+      try {
+        normalizedNewUrl = validateServerAddress(newUrl);
+      } catch (error) {
+        console.warn("Skipping insecure or invalid server URL switch:", error);
+        return;
+      }
 
-      const newApi = jellyfin.createApi(newUrl, api.accessToken);
+      const newApi = jellyfin.createApi(normalizedNewUrl, api.accessToken);
       setApi(newApi);
       // Note: We don't update storage.set("serverUrl") here
       // because we want to keep the original remote URL as the "primary" URL
@@ -497,12 +546,13 @@ export const JellyfinProvider: React.FC<{ children: ReactNode }> = ({
         // Run migration to multi-account format (once)
         await migrateToMultiAccount();
 
-        const token = getTokenFromStorage();
+        const token = await getTokenFromStorage();
         const serverUrl = getServerUrlFromStorage();
         const storedUser = getUserFromStorage();
 
         if (serverUrl && token) {
-          const apiInstance = jellyfin.createApi(serverUrl, token);
+          const validatedServerUrl = validateServerAddress(serverUrl);
+          const apiInstance = jellyfin.createApi(validatedServerUrl, token);
           setApi(apiInstance);
 
           if (storedUser?.Id) {
@@ -515,12 +565,12 @@ export const JellyfinProvider: React.FC<{ children: ReactNode }> = ({
           // Migrate current session to secure storage if not already saved
           if (storedUser?.Id && storedUser?.Name) {
             const existingCredential = await getAccountCredential(
-              serverUrl,
+              validatedServerUrl,
               storedUser.Id,
             );
             if (!existingCredential) {
               await saveAccountCredential({
-                serverUrl,
+                serverUrl: validatedServerUrl,
                 serverName: "",
                 token,
                 userId: storedUser.Id,
@@ -597,8 +647,20 @@ function useProtectedRoute(user: UserDto | null, loaded = false) {
   }, [user, segments, loaded]);
 }
 
-export function getTokenFromStorage(): string | null {
-  return storage.getString("token") || null;
+export async function getTokenFromStorage(): Promise<string | null> {
+  const secureToken = await getSessionToken();
+  if (secureToken) {
+    return secureToken;
+  }
+
+  const legacyToken = storage.getString("token");
+  if (legacyToken) {
+    await setSessionToken(legacyToken);
+    storage.remove("token");
+    return legacyToken;
+  }
+
+  return null;
 }
 
 export function getUserFromStorage(): UserDto | null {

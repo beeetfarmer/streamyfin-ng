@@ -7,10 +7,6 @@
         <trust-anchors>
             <!-- Trust pre-installed CAs -->
             <certificates src="system" />
-            <!-- Additionally trust user added CAs -->
-            <certificates
-                src="user"
-                tools:ignore="AcceptsUserCertificates" />
         </trust-anchors>
     </base-config>
 </network-security-config>

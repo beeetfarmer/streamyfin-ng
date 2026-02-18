@@ -1,6 +1,7 @@
 import type { Api } from "@jellyfin/sdk";
 import type { MediaSourceInfo } from "@jellyfin/sdk/lib/generated-client/models";
 import { getMediaInfoApi } from "@jellyfin/sdk/lib/utils/api";
+import { stripSensitiveQueryParams } from "@/utils/networkSecurity";
 import trackPlayerProfile from "@/utils/profiles/trackplayer";
 
 export interface AudioStreamResult {
@@ -8,6 +9,7 @@ export interface AudioStreamResult {
   sessionId: string | null;
   mediaSource: MediaSourceInfo | null;
   isTranscoding: boolean;
+  headers: Record<string, string>;
 }
 
 /**
@@ -20,6 +22,11 @@ export const getAudioStreamUrl = async (
   itemId: string,
 ): Promise<AudioStreamResult | null> => {
   try {
+    const headers = {
+      Authorization: `MediaBrowser Token="${api.accessToken}"`,
+      "X-Emby-Token": api.accessToken,
+    };
+
     const res = await getMediaInfoApi(api).getPlaybackInfo(
       { itemId },
       {
@@ -38,11 +45,13 @@ export const getAudioStreamUrl = async (
     const mediaSource = res.data.MediaSources?.[0] || null;
 
     if (mediaSource?.TranscodingUrl) {
+      const transcodingUrl = `${api.basePath}${mediaSource.TranscodingUrl}`;
       return {
-        url: `${api.basePath}${mediaSource.TranscodingUrl}`,
+        url: stripSensitiveQueryParams(transcodingUrl),
         sessionId,
         mediaSource,
         isTranscoding: true,
+        headers,
       };
     }
 
@@ -52,7 +61,6 @@ export const getAudioStreamUrl = async (
       container: mediaSource?.Container || "mp3",
       mediaSourceId: mediaSource?.Id || "",
       deviceId: api.deviceInfo.id,
-      api_key: api.accessToken,
       userId,
     });
 
@@ -61,6 +69,7 @@ export const getAudioStreamUrl = async (
       sessionId,
       mediaSource,
       isTranscoding: false,
+      headers,
     };
   } catch {
     return null;

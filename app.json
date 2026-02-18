@@ -46,13 +46,19 @@
       },
       "package": "com.fredrikburmester.streamyfin",
       "permissions": [
+        "android.permission.INTERNET",
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
-        "android.permission.WRITE_SETTINGS",
         "android.permission.ACCESS_FINE_LOCATION"
       ],
-      "blockedPermissions": ["android.permission.ACTIVITY_RECOGNITION"],
-      "googleServicesFile": "./google-services.json"
+      "blockedPermissions": [
+        "android.permission.ACTIVITY_RECOGNITION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.WRITE_SETTINGS",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ]
     },
     "plugins": [
       "@react-native-tvos/config-tv",
@@ -108,13 +114,6 @@
           "imageWidth": 100
         }
       ],
-      [
-        "expo-notifications",
-        {
-          "icon": "./assets/images/notification.png",
-          "color": "#9333EA"
-        }
-      ],
       "expo-web-browser",
       ["./plugins/with-runtime-framework-headers.js"],
       ["./plugins/withChangeNativeAndroidTextToWhite.js"],
@@ -145,7 +144,9 @@
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/e79219d1-797f-4fbe-9fa1-cfd360690a68"
+      "enabled": false,
+      "checkAutomatically": "NEVER",
+      "fallbackToCacheTimeout": 0
     }
   }
 }

@@ -1,14 +1,11 @@
 import { Feather } from "@expo/vector-icons";
-import { useCallback, useEffect } from "react";
+import { useCallback } from "react";
 import { Platform } from "react-native";
 import { Pressable } from "react-native-gesture-handler";
 import GoogleCast, {
   CastButton,
   CastContext,
-  useCastDevice,
-  useDevices,
   useMediaStatus,
-  useRemoteMediaClient,
 } from "react-native-google-cast";
 import { RoundButton } from "./RoundButton";
 
@@ -18,23 +15,19 @@ export function Chromecast({
   background = "transparent",
   ...props
 }) {
-  const client = useRemoteMediaClient();
-  const castDevice = useCastDevice();
-  const devices = useDevices();
-  const sessionManager = GoogleCast.getSessionManager();
   const discoveryManager = GoogleCast.getDiscoveryManager();
   const mediaStatus = useMediaStatus();
 
-  useEffect(() => {
-    (async () => {
-      if (!discoveryManager) {
-        console.warn("DiscoveryManager is not initialized");
-        return;
-      }
+  const showCastControls = useCallback(async () => {
+    if (!discoveryManager) {
+      console.warn("DiscoveryManager is not initialized");
+      return;
+    }
 
-      await discoveryManager.startDiscovery();
-    })();
-  }, [client, devices, castDevice, sessionManager, discoveryManager]);
+    await discoveryManager.startDiscovery();
+    if (mediaStatus?.currentItemId) CastContext.showExpandedControls();
+    else CastContext.showCastDialog();
+  }, [discoveryManager, mediaStatus?.currentItemId]);
 
   // Android requires the cast button to be present for startDiscovery to work
   const AndroidCastButton = useCallback(
@@ -45,14 +38,7 @@ export function Chromecast({
 
   if (Platform.OS === "ios") {
     return (
-      <Pressable
-        className='mr-4'
-        onPress={() => {
-          if (mediaStatus?.currentItemId) CastContext.showExpandedControls();
-          else CastContext.showCastDialog();
-        }}
-        {...props}
-      >
+      <Pressable className='mr-4' onPress={showCastControls} {...props}>
         <AndroidCastButton />
         <Feather name='cast' size={22} color={"white"} />
       </Pressable>
@@ -65,10 +51,7 @@ export function Chromecast({
         size='large'
         className='mr-2'
         background={false}
-        onPress={() => {
-          if (mediaStatus?.currentItemId) CastContext.showExpandedControls();
-          else CastContext.showCastDialog();
-        }}
+        onPress={showCastControls}
         {...props}
       >
         <AndroidCastButton />
@@ -77,14 +60,7 @@ export function Chromecast({
     );
 
   return (
-    <RoundButton
-      size='large'
-      onPress={() => {
-        if (mediaStatus?.currentItemId) CastContext.showExpandedControls();
-        else CastContext.showCastDialog();
-      }}
-      {...props}
-    >
+    <RoundButton size='large' onPress={showCastControls} {...props}>
       <AndroidCastButton />
       <Feather name='cast' size={22} color={"white"} />
     </RoundButton>

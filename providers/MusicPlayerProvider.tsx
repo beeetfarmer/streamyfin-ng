@@ -243,6 +243,7 @@ const itemToTrack = (
   url: string,
   api: Api,
   preferLocalAudio = true,
+  headers?: Record<string, string>,
 ): Track => {
   const albumId = item.AlbumId || item.ParentId;
   const artworkId = albumId || item.Id;
@@ -261,7 +262,7 @@ const itemToTrack = (
     );
   }
 
-  return {
+  const track: Track = {
     id: item.Id || "",
     url: finalUrl,
     title: item.Name || "Unknown",
@@ -270,6 +271,12 @@ const itemToTrack = (
     artwork,
     duration: item.RunTimeTicks ? item.RunTimeTicks / 10000000 : undefined,
   };
+
+  if (!cachedUrl && headers) {
+    track.headers = headers;
+  }
+
+  return track;
 };
 
 export const MusicPlayerProvider: React.FC<MusicPlayerProviderProps> = ({
@@ -519,7 +526,7 @@ export const MusicPlayerProvider: React.FC<MusicPlayerProviderProps> = ({
         if (!result) return null;
 
         return {
-          track: itemToTrack(item, result.url, api, false),
+          track: itemToTrack(item, result.url, api, false, result.headers),
           sessionId: result.sessionId,
           mediaSource: result.mediaSource,
           isTranscoding: result.isTranscoding,
@@ -872,7 +879,13 @@ export const MusicPlayerProvider: React.FC<MusicPlayerProviderProps> = ({
         const preferLocal = settings?.preferLocalAudio ?? true;
         await TrackPlayer.reset();
         await TrackPlayer.add(
-          itemToTrack(state.currentTrack, result.url, api, preferLocal),
+          itemToTrack(
+            state.currentTrack,
+            result.url,
+            api,
+            preferLocal,
+            result.headers,
+          ),
         );
         await TrackPlayer.seekTo(state.progress);
         await TrackPlayer.play();
@@ -1099,7 +1112,7 @@ export const MusicPlayerProvider: React.FC<MusicPlayerProviderProps> = ({
         const result = await getAudioStreamUrl(api, user.Id, item.Id);
         if (result) {
           await TrackPlayer.add(
-            itemToTrack(item, result.url, api, preferLocal),
+            itemToTrack(item, result.url, api, preferLocal, result.headers),
           );
         } else if (cachedUrl) {
           console.log(
@@ -1135,7 +1148,7 @@ export const MusicPlayerProvider: React.FC<MusicPlayerProviderProps> = ({
         const result = await getAudioStreamUrl(api, user.Id, item.Id);
         if (result) {
           await TrackPlayer.add(
-            itemToTrack(item, result.url, api, preferLocal),
+            itemToTrack(item, result.url, api, preferLocal, result.headers),
             insertIndex,
           );
         } else if (cachedUrl) {
@@ -1514,6 +1527,7 @@ export const MusicPlayerProvider: React.FC<MusicPlayerProviderProps> = ({
           downloadTrack(itemId, result.url, {
             permanent: false,
             container: result.mediaSource?.Container || undefined,
+            headers: result.headers,
           }).catch(() => {
             // Silent fail - caching is best-effort
           });

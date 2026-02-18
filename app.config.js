@@ -8,14 +8,5 @@ module.exports = ({ config }) => {
     ]);
   }
 
-  // Only override googleServicesFile if env var is set
-  const androidConfig = {};
-  if (process.env.GOOGLE_SERVICES_JSON) {
-    androidConfig.googleServicesFile = process.env.GOOGLE_SERVICES_JSON;
-  }
-
-  return {
-    ...(Object.keys(androidConfig).length > 0 && { android: androidConfig }),
-    ...config,
-  };
+  return config;
 };

@@ -29,9 +29,19 @@ export interface ActiveDownload {
   state: "running" | "suspended" | "canceling" | "completed" | "unknown";
 }
 
+export type DownloadRequestHeaders = Record<string, string>;
+
 export interface BackgroundDownloaderModuleType {
-  startDownload(url: string, destinationPath?: string): Promise<number>;
-  enqueueDownload(url: string, destinationPath?: string): Promise<number>;
+  startDownload(
+    url: string,
+    destinationPath?: string,
+    headers?: DownloadRequestHeaders,
+  ): Promise<number>;
+  enqueueDownload(
+    url: string,
+    destinationPath?: string,
+    headers?: DownloadRequestHeaders,
+  ): Promise<number>;
   cancelDownload(taskId: number): void;
   cancelQueuedDownload(url: string): void;
   cancelAllDownloads(): void;
