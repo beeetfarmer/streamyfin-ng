@@ -23,14 +23,39 @@ const NetworkStatusContext = createContext<NetworkStatusContextType | null>(
   null,
 );
 
+const SERVER_CHECK_TIMEOUT_MS = 4000;
+const SERVER_CHECK_RETRY_DELAY_MS = 500;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function checkApiReachable(basePath?: string): Promise<boolean> {
   if (!basePath) return false;
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(
+    () => controller.abort(),
+    SERVER_CHECK_TIMEOUT_MS,
+  );
+
   try {
-    const url = basePath.endsWith("/") ? basePath : `${basePath}/`;
-    const response = await fetch(url, { method: "HEAD" });
-    return response.ok;
+    const normalizedBasePath = basePath.endsWith("/")
+      ? basePath
+      : `${basePath}/`;
+    // Ping endpoint is more reliable than HEAD / for reverse proxies.
+    const pingUrl = `${normalizedBasePath}System/Ping`;
+    const response = await fetch(pingUrl, {
+      method: "GET",
+      signal: controller.signal,
+      cache: "no-store",
+    });
+    // Any non-5xx response means server is reachable.
+    return response.status < 500;
   } catch {
     return false;
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
@@ -41,11 +66,28 @@ export function NetworkStatusProvider({ children }: { children: ReactNode }) {
   const [api] = useAtom(apiAtom);
   const queryClient = useQueryClient();
   const wasServerConnected = useRef<boolean | null>(null);
+  const validationRequestId = useRef(0);
 
   const validateConnection = useCallback(async () => {
-    if (!api?.basePath) return false;
-    const reachable = await checkApiReachable(api.basePath);
-    setServerConnected(reachable);
+    if (!api?.basePath) {
+      setServerConnected(false);
+      return false;
+    }
+
+    const requestId = ++validationRequestId.current;
+    setServerConnected((prev) => (prev === true ? prev : null));
+
+    let reachable = await checkApiReachable(api.basePath);
+    if (!reachable) {
+      await sleep(SERVER_CHECK_RETRY_DELAY_MS);
+      // Ignore stale checks if a newer check started.
+      if (requestId !== validationRequestId.current) return false;
+      reachable = await checkApiReachable(api.basePath);
+    }
+
+    if (requestId === validationRequestId.current) {
+      setServerConnected(reachable);
+    }
     return reachable;
   }, [api?.basePath]);
 
@@ -57,8 +99,9 @@ export function NetworkStatusProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener(async (state) => {
-      setIsConnected(!!state.isConnected);
-      if (state.isConnected) {
+      const connected = !!state.isConnected;
+      setIsConnected(connected);
+      if (connected && api?.basePath) {
         await validateConnection();
       } else {
         setServerConnected(false);
@@ -67,15 +110,25 @@ export function NetworkStatusProvider({ children }: { children: ReactNode }) {
 
     // Initial check
     NetInfo.fetch().then((state) => {
-      if (state.isConnected) {
-        validateConnection();
+      const connected = !!state.isConnected;
+      setIsConnected(connected);
+      if (connected && api?.basePath) {
+        void validateConnection();
       } else {
         setServerConnected(false);
       }
     });
 
     return () => unsubscribe();
-  }, [validateConnection]);
+  }, [api?.basePath, validateConnection]);
+
+  useEffect(() => {
+    if (isConnected && api?.basePath) {
+      void validateConnection();
+    } else {
+      setServerConnected(false);
+    }
+  }, [api?.basePath, isConnected, validateConnection]);
 
   // Refetch active queries when server becomes reachable
   useEffect(() => {

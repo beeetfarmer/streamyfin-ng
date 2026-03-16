@@ -53,6 +53,8 @@ interface Server {
   address: string;
 }
 
+const SESSION_VALIDATION_TIMEOUT_MS = 5000;
+
 export const apiAtom = atom<Api | null>(null);
 export const userAtom = atom<UserDto | null>(null);
 export const wsAtom = atom<WebSocket | null>(null);
@@ -109,6 +111,20 @@ function validateServerAddress(address: string): string {
   return normalizedAddress;
 }
 
+async function getCurrentUserWithTimeout(api: Api) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(
+    () => controller.abort(),
+    SESSION_VALIDATION_TIMEOUT_MS,
+  );
+
+  try {
+    return await getUserApi(api).getCurrentUser({ signal: controller.signal });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 export const JellyfinProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
@@ -124,7 +140,7 @@ export const JellyfinProvider: React.FC<{ children: ReactNode }> = ({
       setJellyfin(
         () =>
           new Jellyfin({
-            clientInfo: { name: "Streamyfin", version: "0.52.0" },
+            clientInfo: { name: "Streamyfin-ng", version: "0.1.1" },
             deviceInfo: {
               name: deviceName,
               id,
@@ -145,9 +161,9 @@ export const JellyfinProvider: React.FC<{ children: ReactNode }> = ({
   const headers = useMemo(() => {
     if (!deviceId) return {};
     return {
-      authorization: `MediaBrowser Client="Streamyfin", Device=${
+      authorization: `MediaBrowser Client="Streamyfin-ng", Device=${
         Platform.OS === "android" ? "Android" : "iOS"
-      }, DeviceId="${deviceId}", Version="0.52.0"`,
+      }, DeviceId="${deviceId}", Version="0.1.1"`,
     };
   }, [deviceId]);
 
@@ -542,6 +558,8 @@ export const JellyfinProvider: React.FC<{ children: ReactNode }> = ({
     const initializeJellyfin = async () => {
       if (!jellyfin) return;
 
+      let splashCanHide = false;
+
       try {
         // Run migration to multi-account format (once)
         await migrateToMultiAccount();
@@ -559,32 +577,60 @@ export const JellyfinProvider: React.FC<{ children: ReactNode }> = ({
             setUser(storedUser);
           }
 
-          const response = await getUserApi(apiInstance).getCurrentUser();
-          setUser(response.data);
+          // Do not keep splash up waiting for network validation.
+          setInitialLoaded(true);
+          splashCanHide = true;
 
-          // Migrate current session to secure storage if not already saved
-          if (storedUser?.Id && storedUser?.Name) {
-            const existingCredential = await getAccountCredential(
-              validatedServerUrl,
-              storedUser.Id,
-            );
-            if (!existingCredential) {
-              await saveAccountCredential({
-                serverUrl: validatedServerUrl,
-                serverName: "",
-                token,
-                userId: storedUser.Id,
-                username: storedUser.Name,
-                savedAt: Date.now(),
-                securityType: "none",
-              });
+          void (async () => {
+            try {
+              const response = await getCurrentUserWithTimeout(apiInstance);
+              setUser(response.data);
+
+              // Migrate current session to secure storage if not already saved
+              if (storedUser?.Id && storedUser?.Name) {
+                const existingCredential = await getAccountCredential(
+                  validatedServerUrl,
+                  storedUser.Id,
+                );
+                if (!existingCredential) {
+                  await saveAccountCredential({
+                    serverUrl: validatedServerUrl,
+                    serverName: "",
+                    token,
+                    userId: storedUser.Id,
+                    username: storedUser.Name,
+                    savedAt: Date.now(),
+                    securityType: "none",
+                  });
+                }
+              }
+            } catch (error) {
+              // If token is invalid, clear auth state and route to login.
+              if (
+                axios.isAxiosError(error) &&
+                (error.response?.status === 401 ||
+                  error.response?.status === 403)
+              ) {
+                await clearSessionToken();
+                storage.remove("token");
+                storage.remove("user");
+                setUser(null);
+                setApi(null);
+              } else {
+                console.warn(
+                  "Skipping blocking startup session validation due to network/unreachable server",
+                  error,
+                );
+              }
             }
-          }
+          })();
         }
       } catch (e) {
         console.error(e);
       } finally {
-        setInitialLoaded(true);
+        if (!splashCanHide) {
+          setInitialLoaded(true);
+        }
       }
     };
 

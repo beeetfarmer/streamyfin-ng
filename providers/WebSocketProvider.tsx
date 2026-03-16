@@ -70,7 +70,16 @@ export const WebSocketProvider = ({ children }: WebSocketProviderProps) => {
       .replace("https://", "")
       .replace("http://", "")}/socket?deviceId=${encodeURIComponent(deviceId)}`;
 
-    const newWebSocket = new WebSocket(url, undefined, {
+    type NativeWebSocketConstructor = new (
+      url: string,
+      protocols?: string | string[],
+      options?: {
+        headers?: Record<string, string>;
+      },
+    ) => WebSocket;
+
+    const NativeWebSocket = WebSocket as unknown as NativeWebSocketConstructor;
+    const newWebSocket = new NativeWebSocket(url, undefined, {
       headers: {
         Authorization: `MediaBrowser Token="${api.accessToken}"`,
         "X-Emby-Token": api.accessToken,
