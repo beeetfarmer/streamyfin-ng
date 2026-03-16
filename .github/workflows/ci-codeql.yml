@@ -2,11 +2,7 @@ name: 🛡️ CodeQL Analysis
 
 on:
   push:
-    branches: [master, develop]
-  pull_request:
-    branches: [master, develop]
-  schedule:
-    - cron: '24 2 * * *'
+    branches: [ng-changes]
 
 
 jobs:
