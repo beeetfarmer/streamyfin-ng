@@ -1,7 +1,7 @@
 {
   "name": "streamyfin",
   "main": "./index",
-  "version": "1.0.0",
+  "version": "0.1.1",
   "scripts": {
     "submodule-reload": "git submodule update --init --remote --recursive",
     "clean": "echo y | expo prebuild --clean",

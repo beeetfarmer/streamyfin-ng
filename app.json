@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "Streamyfin",
+    "name": "Streamyfin-ng",
     "slug": "streamyfin",
-    "version": "0.52.0",
+    "version": "0.1.1",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "streamyfin",

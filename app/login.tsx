@@ -537,7 +537,7 @@ const Login: React.FC = () => {
               </View>
 
               <Text className='text-white text-4xl font-bold text-center'>
-                Streamyfin
+                Streamyfin-ng
               </Text>
               <Text className='text-neutral-400 text-base text-left mt-2 mb-1'>
                 {t("server.enter_url_to_jellyfin_server")}
@@ -713,7 +713,7 @@ const Login: React.FC = () => {
                 }}
                 source={require("@/assets/images/icon-ios-plain.png")}
               />
-              <Text className='text-3xl font-bold'>Streamyfin</Text>
+              <Text className='text-3xl font-bold'>Streamyfin-ng</Text>
               <Text className='text-neutral-500'>
                 {t("server.enter_url_to_jellyfin_server")}
               </Text>
