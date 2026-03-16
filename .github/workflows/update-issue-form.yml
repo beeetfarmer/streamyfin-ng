@@ -28,7 +28,7 @@ jobs:
 
       - name: 🔍 Extract minor version from app.json
         id: minor
-        uses: actions/github-script@main
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         with:
           result-encoding: string
           script: |
