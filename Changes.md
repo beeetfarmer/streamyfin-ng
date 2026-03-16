@@ -189,3 +189,69 @@ Added watched/unwatched badges across all poster types so every item in the UI s
 - Added `<WatchedIndicator item={season} />` inside each season poster, so season posters on series pages show watched/unwatched count badges.
 
 ---
+
+## 9. Startup, Splash Screen, and Server Reachability Fixes (Bug Fix)
+
+Fixed launch behavior where the app could stay on the splash/logo for a long time, and where users could land on "Server Unreachable" even when the server was actually available.
+
+### `providers/JellyfinProvider.tsx` (modified)
+- Added `SESSION_VALIDATION_TIMEOUT_MS` and `getCurrentUserWithTimeout(...)` for bounded startup auth validation.
+- Changed startup flow to stop blocking splash hide on network-dependent user validation:
+  - Restores API/user state from storage quickly.
+  - Calls `setInitialLoaded(true)` immediately after restoring session state so splash can hide.
+  - Runs `getCurrentUser()` validation in the background.
+- Added guarded handling for invalid tokens in background validation:
+  - On `401/403`, clears token/user state and routes through normal login protection.
+  - For offline/unreachable/network errors, logs and keeps current local session state instead of blocking launch.
+
+### `providers/NetworkStatusProvider.tsx` (modified)
+- Replaced fragile `HEAD /` reachability probe with `GET /System/Ping`.
+- Added server check timeout (`SERVER_CHECK_TIMEOUT_MS`) and short retry delay (`SERVER_CHECK_RETRY_DELAY_MS`) with one automatic retry before marking unreachable.
+- Added stale-request protection using `validationRequestId` so older checks cannot overwrite newer results.
+- Improved initial connectivity state handling:
+  - `NetInfo.fetch()` now also sets `isConnected` (not just `serverConnected`).
+  - Revalidates when `api.basePath` or connectivity changes.
+- Keeps existing Retry button behavior, but with more reliable underlying checks.
+
+---
+
+## 10. App Identity & Version Update (Metadata)
+
+Updated app branding and version metadata to **Streamyfin-ng** and **0.1.1** across Expo/native configs and client headers.
+
+### `app.json` (modified)
+- `expo.name` changed to `Streamyfin-ng`.
+- `expo.version` changed to `0.1.1`.
+
+### `package.json` (modified)
+- `version` changed to `0.1.1`.
+
+### Android
+
+#### `android/app/build.gradle` (modified)
+- `versionName` changed to `0.1.1`.
+
+#### `android/app/src/main/res/values/strings.xml` (modified)
+- `app_name` changed to `Streamyfin-ng`.
+- `expo_runtime_version` changed to `0.1.1`.
+
+### iOS
+
+#### `ios/Streamyfin/Info.plist` (modified)
+- `CFBundleDisplayName` changed to `Streamyfin-ng`.
+- `CFBundleShortVersionString` changed to `0.1.1`.
+
+#### `ios/Streamyfin/Supporting/Expo.plist` (modified)
+- `EXUpdatesRuntimeVersion` changed to `0.1.1`.
+
+### In-app client identity
+
+#### `providers/JellyfinProvider.tsx` (modified)
+- Jellyfin client name/version metadata changed to `Streamyfin-ng` / `0.1.1` in:
+  - `clientInfo`
+  - Authorization header `MediaBrowser Client=... Version=...`
+
+#### `app/login.tsx` (modified)
+- Login screen title text updated from `Streamyfin` to `Streamyfin-ng` (tablet and mobile views).
+
+---

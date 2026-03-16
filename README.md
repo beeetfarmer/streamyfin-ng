@@ -1,283 +1,134 @@
-<a href="https://www.buymeacoffee.com/fredrikbur3" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" alt="Buy Me A Coffee" style="height: 41px !important;width: 174px !important;box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;-webkit-box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;" ></a>
+# Streamyfin-ng
 
+Streamyfin-ng is a modern Jellyfin client built with Expo/React Native for Android and iOS.
+It is designed for smooth media browsing, playback, and offline-friendly usage with a focus on practical quality-of-life improvements.
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/streamyfin/.github/refs/heads/main/streamyfin-github-banner.png" alt="Streamyfin" width="100%">
-</p>
+## Fork Notice
 
-<p align="center">
-  <a href="https://discord.gg/aJvAYeycyY">
-    <img alt="Streamyfin Discord" src="https://img.shields.io/badge/Discord-Streamyfin-blue?style=flat-square&logo=discord">
-  </a>
-</p>
+This project is a fork of [streamyfin/streamyfin](https://github.com/streamyfin/streamyfin).
 
-**Streamyfin is a user-friendly Jellyfin video streaming client built with Expo. Designed as an alternative to other Jellyfin clients, it aims to offer a smooth and reliable streaming experience. We hope you'll find it a valuable addition to your media streaming toolbox.**
+Streamyfin-ng keeps compatibility with Jellyfin workflows while adding new playback UX features, home-screen customization, metadata enhancements, and startup/connectivity reliability improvements.
 
----
+## What the app does
 
-<p align="center">
-  <img src="./assets/images/screenshots/screenshot1.png" width="20%">
-  &nbsp;
-  <img src="./assets/images/screenshots/screenshot3.png" width="20%">
-  &nbsp;
-  <img src="./assets/images/screenshots/screenshot2.png" width="20%">
-  &nbsp;
-  <img src="./assets/images/jellyseerr.PNG" width="21%">
-</p>
+- Connects to your Jellyfin server and streams your personal media
+- Provides mobile-friendly playback controls and media navigation
+- Supports downloaded content for offline viewing
+- Includes integrations and settings for advanced server-based workflows
 
 
-## 🌟 Features
+## How Streamyfin-ng is different from Streamyfin:
 
-- 🚀 **Skip Intro / Credits Support**: Lets you quickly skip intros and credits during playback
-- 🖼️ **Trickplay images**: The new golden standard for chapter previews when seeking
-- 📥 **Download media**: Save your media locally and watch it offline
-- ⚙️ **Settings management**: Manage app configurations for all users through our plugin
-- 🤖 **Seerr (formerly Jellyseerr) integration**: Request media directly in the app
-- 👁️ **Sessions view:** View all active sessions currently streaming on your server
-- 📡 **Chromecast**: Cast your media to any Chromecast-enabled device
+### New Features
 
-## Additional Bug Fixes, Enhancements and New Features in the NG build:
+#### Subtitle Selector in Video Player
 
-### Bug Fixes:
+- Dedicated subtitle button in the player header controls for quick subtitle track switching
+- Dropdown menu lists all available subtitle tracks
+- One-tap switching without digging through settings menus
 
-- **Subtitle Size Fix**: Fixed subtitles appearing extremely large by default during video playback
+#### Double-Tap to Seek
 
-### Enhancements:
+- YouTube-style double-tap gesture in the video player
+- Double-tap the right half of the screen to seek forward 10 seconds
+- Double-tap the left half to seek backward 10 seconds
+- Includes haptic feedback and on-screen "+10s" / "-10s" visual indicator
 
-- **Watched Indicators on All Posters**: Consistent watched/unwatched badges across the entire app on the posters
-- **Cast & Crew on Series Pages**:  Series/TV show pages now display Cast & Crew sections (previously only available on movie and episode pages) and includes "More with this actor" navigation
-- **Improved Actor Page Layout**: Redesigned actor/person page with a portrait image layout that works better on tablets and "Appeared In" section renamed to "In Library" for clarity
+#### Home Screen Collections
 
-### New Features:
+- New setting under `Appearance > Home Collections` to display Jellyfin BoxSet collections on the home screen
+- Pick which collections to show via toggle switches
+- Each collection gets its own scrollable section with paginated loading
 
-- **Subtitle Selector in Video Player**: Dedicated subtitle button in the player header controls for quick subtitle track switching
-- **Double-Tap to Seek**:  YouTube-style double-tap gesture in the video player
-- **Home Screen Collections**: New setting under **Appearance > Home Collections** to display Jellyfin BoxSet collections on the home screen
-- **Home Sections Visibility & Reordering**: New setting under **Appearance > Home Sections** to customize the home screen layout
-- **TMDB Integration for Actor Pages**: View an actor's **full filmography from TMDB** on their profile page even if their work is not present in your library (Add your TMDB API key under Settings > Plugins > TMDB for actor filmography features)
+#### Home Sections Visibility & Reordering
 
-> For more info about the changes in the ng build, check the [Changes.md](Changes.md) file.
+- New setting under `Appearance > Home Sections` to customize the home screen layout
+- Hide/show individual sections (Continue Watching, Next Up, Recently Added, Collections, Suggested, etc.)
+- Drag to reorder sections to arrange the home screen however you like
 
-## 🧪 Experimental Features
+#### TMDB Integration for Actor Pages
 
-Streamyfin offers exciting experimental features such as media downloading and Chromecast support. These features are under active development, and your feedback and patience help us make them even better.
+- View an actor's full filmography from TMDB on their profile page
+- Shows movies and TV shows the actor has appeared in that are not already in your Jellyfin library
+- Tapping an item opens a detail page with backdrop, synopsis, genres, and cast list
+- Requires a free TMDB API key (configurable under `Settings > Plugins > TMDB`)
+- Can be toggled on/off per user preference
 
-### 📥 Downloading
+### Bug Fixes
 
-Downloading works by using FFmpeg to convert an HLS stream into a video file on your device. This lets you download and watch any content that you can stream. The conversion is handled in real time by Jellyfin on the server during the download. While this may take a bit longer, it ensures compatibility with any file your server can transcode.
+#### Subtitle Size Fix
 
-### 🧩 Streamyfin Plugin
+- Fixed subtitles appearing extremely large by default during video playback
+- Root cause: subtitle size value was being passed as an absolute font size (`100pt`) instead of a scale factor (`1.0x`)
+- Subtitles now display at the correct default size
 
-The Jellyfin Plugin for Streamyfin is a plugin you install into Jellyfin that holds all settings for the client Streamyfin. This allows you to synchronize settings across all your users, like for example:
+### Enhancements
 
-- Automatic Seerr login with no user input required
-- Set your preferred default languages
-- Configure download method and search provider
-- Personalize your home screen
-- And much more
+#### Watched Indicators on All Posters
 
-[Streamyfin Plugin](https://github.com/streamyfin/jellyfin-plugin-streamyfin)
+- Consistent watched/unwatched badges across the entire app
+- Checkmark badge on fully watched items
+- Unplayed count badge (for example, `5`) on Series, BoxSets, and Seasons with remaining episodes
+- Corner triangle on unwatched Movies and Episodes
+- Visible on home page series posters, library posters, and season posters on series pages
 
-### 📡 Chromecast
+#### Cast & Crew on Series Pages
 
-Chromecast support is currently under development. Video casting is already available, and we're actively working on adding subtitle support and additional features.
+- Series/TV show pages now display Cast & Crew sections (previously only available on movie and episode pages)
+- Includes "More with this actor" navigation
 
-### 🎬 MPV Player
+#### Improved Actor Page Layout
 
-Streamyfin uses [MPV](https://mpv.io/) as its primary video player on all platforms, powered by [MPVKit](https://github.com/mpvkit/MPVKit). MPV is a powerful, open-source media player known for its wide format support and high-quality playback.
-Thanks to [@Alexk2309](https://github.com/Alexk2309) for the hard work building the native MPV module in Streamyfin.
+- Redesigned actor/person page with a portrait image layout that works better on tablets
+- "Appeared In" section renamed to "In Library" for clarity
 
-### 🔍 Jellysearch
+### Launch and Connectivity Improvements
 
-[Jellysearch](https://gitlab.com/DomiStyle/jellysearch) works with Streamyfin
+- Splash/logo no longer waits on long server validation before opening the app UI
+- Session validation now runs in the background with a timeout to avoid long startup stalls when offline
+- Server reachability checks now use `System/Ping` with timeout + retry to reduce false "Server Unreachable" screens on app open
 
-> A fast full-text search proxy for Jellyfin. Integrates seamlessly with most Jellyfin clients.
 
-## 🛣️ Roadmap
+For the full implementation-level breakdown, see [Changes.md](./Changes.md).
 
-Check out our [Roadmap](https://github.com/users/fredrikburmester/projects/5) To see what we're working on next, we are always open to feedback and suggestions. Please let us know if you have any ideas or feature requests.
+## Development
 
-## 📥 Download Streamyfin
+### Prerequisites
 
-<div style="display: flex; gap: 5px;">
-  <a href="https://apps.apple.com/app/streamyfin/id6593660679?l=en-GB"><img height=50 alt="Get Streamyfin on App Store" src="./assets/Download_on_the_App_Store_Badge.png"/></a>
-  <a href="https://play.google.com/store/apps/details?id=com.fredrikburmester.streamyfin"><img height=50 alt="Get Streamyfin on Google Play Store" src="./assets/Google_Play_Store_badge_EN.svg"/></a>
-  <a href="https://github.com/streamyfin/streamyfin/releases/latest"><img height=50 alt="Get Streamyfin on Github" src="./assets/Download_on_Github_.png"/></a>
-  <a href="https://apps.obtainium.imranr.dev/redirect.html?r=obtainium://add/https://github.com/streamyfin/streamyfin"><img height=50 alt="Add Streamyfin to Obtainium" src="./assets/Download_with_Obtainium.png"/></a>
-</div>
+- Node.js `>20`
+- Bun
+- Android Studio and/or Xcode
 
-### 🧪 Beta Testing
-
-To access the Streamyfin beta, you need to subscribe to the Member tier (or higher) on [Patreon](https://www.patreon.com/streamyfin). This grants you immediate access to the ⁠🧪-beta-releases channel on Discord and lets me know you’ve subscribed. This is where I share APKs and IPAs. It does not provide automatic TestFlight access, so please send me a DM (Cagemaster) with the email you use for Apple so we can add you manually.
-
-**Note**: Anyone actively contributing to Streamyfin’s source code will receive automatic access to beta releases.
-
-## 🚀 Getting Started
-
-### ⚙️ Prerequisites
-
-- Your device is on the same network as the Jellyfin server (for local connections)  
-- Your Jellyfin server is up and running with remote access enabled if you plan to connect from outside your local network  
-- Your server version is up to date (older versions may cause compatibility issues)  
-- You have a valid Jellyfin user account with access to the media libraries you want to view  
-- If using features such as **downloads** or **Seerr integration**, confirm the required plugins are installed and configured on your Jellyfin server
-
-## 🙌 Contributing
-
-We welcome contributions that improve Streamyfin. Start by forking the repository and submitting a pull request. For major changes or new features, please open an issue first to discuss your ideas and ensure alignment with the project.
-
-## 🌍 Translations
-
-[![Crowdin Translation Status](https://badges.crowdin.net/streamyfin/localized.svg)](https://crowdin.com/project/streamyfin)
-
-Streamyfin is available in multiple languages, and we’re always looking for contributors to help make the app accessible worldwide.  
-You can contribute translations directly on our [Crowdin project page](https://crowdin.com/project/streamyfin).
-
-### 👨‍💻 Development Info
-
-1. Use node `>20`
-2. Install dependencies `bun i && bun run submodule-reload`
-3. Make sure you have xcode and/or android studio installed. (follow the guides for expo: https://docs.expo.dev/workflow/android-studio-emulator/)
-   - If iOS builds fail with `missing Metal Toolchain` (KSPlayer shaders), run `npm run ios:install-metal-toolchain` once
-4. Install BiomeJS extension in VSCode/Your IDE (https://biomejs.dev/)
-4. run `npm run prebuild`
-5. Create an expo dev build by running `npm run ios` or `npm run android`. This will open a simulator on your computer and run the app
-
-For the TV version suffix the npm commands with `:tv`.
-
-`npm run prebuild:tv`  
-`npm run ios:tv or npm run android:tv`
-
-## 👋 Get in Touch with Us
-
-Need assistance or have any questions?
-
-- **Discord:** [Join our server](https://discord.gg/BuGG9ZNhaE)
-- **GitHub Issues:** [Report bugs or request features](https://github.com/streamyfin/streamyfin/issues)  
-- **Email:** [developer@streamyfin.app](mailto:developer@streamyfin.app)  
-
-
-## ❓ FAQ
-
-1. Q: Why can't I see my libraries in Streamyfin?  
-   A: Make sure your server is running one of the latest versions and that you have at least one library that isn't audio only
-2. Q: Why can't I see my music library?
-   A: We don't currently support music and are unlikely to support music in the near future
-
-## 📝 Credits
-
-Streamyfin is developed by [Fredrik Burmester](https://github.com/fredrikburmester) and is not affiliated with Jellyfin. The app is built using Expo, React Native, and other open-source libraries.
-
-## 🎖️ Core Developers
-
-Thanks to the following contributors for their significant contributions:
-
-<div align="left">
-<table>
-  <tr>
-    <td align="center">
-      <a href="https://github.com/Alexk2309">
-        <img src="https://github.com/Alexk2309.png?size=55" width="55" style="border-radius: 50%;" />
-        <br /><sub><b>@Alexk2309</b></sub>
-      </a>
-    </td>
-    <td align="center">
-      <a href="https://github.com/herrrta">
-        <img src="https://github.com/herrrta.png?size=55" width="55" style="border-radius: 50%;" />
-        <br /><sub><b>@herrrta</b></sub>
-      </a>
-    </td>
-    <td align="center">
-      <a href="https://github.com/lostb1t">
-        <img src="https://github.com/lostb1t.png?size=55" width="55" style="border-radius: 50%;" />
-        <br /><sub><b>@lostb1t</b></sub>
-      </a>
-    </td>
-    <td align="center">
-      <a href="https://github.com/Simon-Eklundh">
-        <img src="https://github.com/Simon-Eklundh.png?size=55" width="55" style="border-radius: 50%;" />
-        <br /><sub><b>@Simon-Eklundh</b></sub>
-      </a>
-    </td>
-    <td align="center">
-      <a href="https://github.com/topiga">
-        <img src="https://github.com/topiga.png?size=55" width="55" style="border-radius: 50%;" />
-        <br /><sub><b>@topiga</b></sub>
-      </a>
-    </td>
-    <td align="center">
-      <a href="https://github.com/lancechant">
-        <img src="https://github.com/lancechant.png?size=55" width="55" style="border-radius: 50%;" />
-        <br /><sub><b>@lancechant</b></sub>
-      </a>
-    </td>
-  </tr>
-  <tr>
-    <td align="center">
-      <a href="https://github.com/simoncaron">
-        <img src="https://github.com/simoncaron.png?size=55" width="55" style="border-radius: 50%;" />
-        <br /><sub><b>@simoncaron</b></sub>
-      </a>
-    </td>
-    <td align="center">
-      <a href="https://github.com/jakequade">
-        <img src="https://github.com/jakequade.png?size=55" width="55" style="border-radius: 50%;" />
-        <br /><sub><b>@jakequade</b></sub>
-      </a>
-    </td>
-    <td align="center">
-      <a href="https://github.com/Ryan0204">
-        <img src="https://github.com/Ryan0204.png?size=55" width="55" style="border-radius: 50%;" />
-        <br /><sub><b>@Ryan0204</b></sub>
-      </a>
-    </td>
-    <td align="center">
-      <a href="https://github.com/retardgerman">
-        <img src="https://github.com/retardgerman.png?size=55" width="55" style="border-radius: 50%;" />
-        <br /><sub><b>@retardgerman</b></sub>
-      </a>
-    </td>
-    <td align="center">
-      <a href="https://github.com/whoopsi-daisy">
-        <img src="https://github.com/whoopsi-daisy.png?size=55" width="55" style="border-radius: 50%;" />
-        <br /><sub><b>@whoopsi-daisy</b></sub>
-      </a>
-    </td>
-    <td align="center">
-      <a href="https://github.com/Gauvino">
-        <img src="https://github.com/Gauvino.png?size=55" width="55" style="border-radius: 50%;" />
-        <br /><sub><b>@Gauvino</b></sub>
-      </a>
-    </td>
-  </tr>
-</table>
-</div>
-
-## ✨ Acknowledgements
-
-We would like to thank the Jellyfin team for their excellent software and support on Discord.
-
-Special thanks to the official Jellyfin clients, which have served as an inspiration for Streamyfin.
-
-We also thank all other developers who have contributed to Streamyfin, your efforts are greatly appreciated.
-
-A special mention to the following people and projects for their contributions:
-
-- [@Alexk2309](https://github.com/Alexk2309) for building the native MPV module that integrates [MPVKit](https://github.com/mpvkit/MPVKit) with React Native
-- [Reiverr](https://github.com/aleksilassila/reiverr) for invaluable help with understanding the Jellyfin API
-- [Jellyfin TS SDK](https://github.com/jellyfin/jellyfin-sdk-typescript) for providing the TypeScript SDK
-- [Seerr](https://github.com/seerr-team/seerr) for enabling API integration with their project
-
-
-## ⭐ Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=streamyfin/streamyfin&type=Date)](https://star-history.com/#streamyfin/streamyfin&Date)
-
-## 📄 License
-
-Streamyfin is licensed under the Mozilla Public License 2.0 (MPL-2.0).
-This means you are free to use, modify, and distribute this software. The MPL-2.0 is a copyleft license that allows for more flexibility in combining the software with proprietary code.
-Key points of the MPL-2.0:
+### Setup
+
+1. Install dependencies:
+   - `bun i`
+   - `bun run submodule-reload`
+2. Prebuild native projects:
+   - `npm run prebuild`
+3. Build and run dev client:
+   - Android: `npm run android`
+   - iOS: `npm run ios`
+4. Start Metro for Fast Refresh:
+   - `npm run start`
+
+For TV builds:
+
+- `npm run prebuild:tv`
+- `npm run android:tv` or `npm run ios:tv`
+
+## Contributing
+
+Contributions are welcome. Please open an issue for major changes before starting implementation.
+
+## Credits
+
+- Upstream project: [streamyfin/streamyfin](https://github.com/streamyfin/streamyfin)
+- Built with Expo, React Native, Jellyfin SDK, and other open-source libraries
+
+## License
+
+Streamyfin is licensed under the Mozilla Public License 2.0 (MPL-2.0). This means you are free to use, modify, and distribute this software. The MPL-2.0 is a copyleft license that allows for more flexibility in combining the software with proprietary code. Key points of the MPL-2.0:
 
 - You can use the software for any purpose
 - You can modify the software and distribute modified versions
@@ -285,10 +136,8 @@ Key points of the MPL-2.0:
 - You must disclose your source code for any modifications to the covered files
 - Larger works may combine MPL code with code under other licenses
 - MPL-licensed components must remain under the MPL, but the larger work can be under a different license
-- For the full text of the license, please see the LICENSE file in this repository
+- For the full text of the license, please see the `LICENSE` file in this repository
 
-## ⚠️ Disclaimer
-Streamyfin does not promote, support, or condone piracy in any form. The app is intended solely for streaming media that you personally own and control. It does not provide or include any media content. Any discussions, support requests, or references to piracy, as well as any tools, software, or websites related to piracy, are strictly prohibited across all our channels.
+## Disclaimer
 
-## 🤝 Sponsorship
-VPS hosting generously provided by [Hexabyte](https://hexabyte.se/en/vps/?currency=eur) and [SweHosting](https://swehosting.se/en/#tj%C3%A4nster)
+Streamyfin does not promote, support, or condone piracy in any form. The app is intended solely for streaming media that you personally own and control. It does not provide or include any media content. Any discussions, support requests, or references to piracy, as well as any tools, software, or websites related to piracy, are strictly prohibited.
