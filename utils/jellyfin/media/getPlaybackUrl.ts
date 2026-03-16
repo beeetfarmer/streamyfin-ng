@@ -45,7 +45,7 @@ export const getPlaybackUrl = async (
   const queryParams = new URLSearchParams({
     deviceId: api.deviceInfo?.id || "",
     Tag: ETag || "",
-    MediaSourceId: Id || "",
+    MediaSourceId: Id,
   });
 
   return `/Videos/${Id}/stream?${queryParams}`;

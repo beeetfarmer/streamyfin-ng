@@ -134,7 +134,7 @@ const page: React.FC = () => {
               <DownloadItems
                 size='large'
                 title={t("item_card.download.download_series")}
-                items={allEpisodes || []}
+                items={allEpisodes}
                 MissingDownloadIconComponent={() => (
                   <Ionicons name='download' size={22} color='white' />
                 )}

@@ -33,15 +33,6 @@ const BAR_HEIGHT = Platform.OS === "android" ? 58 : 50;
 // Gesture thresholds
 const VELOCITY_THRESHOLD = 1000;
 
-// Logarithmic slowdown - never stops, just gets progressively slower
-const rubberBand = (distance: number, scale: number = 8): number => {
-  "worklet";
-  const absDistance = Math.abs(distance);
-  const sign = distance < 0 ? -1 : 1;
-  // Logarithmic: keeps growing but slower and slower
-  return sign * scale * Math.log(1 + absDistance / scale);
-};
-
 export const MiniPlayerBar: React.FC = () => {
   const [api] = useAtom(apiAtom);
   const insets = useSafeAreaInsets();
@@ -103,7 +94,11 @@ export const MiniPlayerBar: React.FC = () => {
     .activeOffsetY([-15, 15])
     .onUpdate((event) => {
       // Logarithmic slowdown - keeps moving but progressively slower
-      translateY.value = rubberBand(event.translationY, 6);
+      const distance = event.translationY;
+      const scale = 6;
+      const absDistance = Math.abs(distance);
+      const sign = distance < 0 ? -1 : 1;
+      translateY.value = sign * scale * Math.log(1 + absDistance / scale);
     })
     .onEnd((event) => {
       const velocity = event.velocityY;
