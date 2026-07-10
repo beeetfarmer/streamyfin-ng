@@ -1,5 +1,6 @@
 import type { BaseItemDto } from "@jellyfin/sdk/lib/generated-client/models";
 import { useQuery } from "@tanstack/react-query";
+import { Image } from "expo-image";
 import { useAtom } from "jotai";
 import { useTranslation } from "react-i18next";
 import { ScrollView, TouchableOpacity, View } from "react-native";
@@ -11,6 +12,36 @@ import { useDownload } from "@/providers/DownloadProvider";
 import { apiAtom, userAtom } from "@/providers/JellyfinProvider";
 import { useOfflineMode } from "@/providers/OfflineModeProvider";
 import { buildOfflineSeasons } from "@/utils/downloads/offline-series";
+import { storage } from "@/utils/mmkv";
+
+/**
+ * Renders a season poster. When offline the API is unavailable, so use the
+ * images stored in mmkv at download time, in order of preference: the real
+ * season poster (keyed by SeasonId), then the first downloaded episode's cover
+ * (keyed by its id), then the series primary image (keyed by SeriesId).
+ */
+const SeasonPoster: React.FC<{ season: BaseItemDto; isOffline: boolean }> = ({
+  season,
+  isOffline,
+}) => {
+  const base64Image = isOffline
+    ? (season.SeasonId ? storage.getString(season.SeasonId) : undefined) ||
+      storage.getString((season as { EpisodeId?: string }).EpisodeId ?? "") ||
+      (season.SeriesId ? storage.getString(season.SeriesId) : undefined)
+    : undefined;
+
+  if (base64Image) {
+    return (
+      <Image
+        source={{ uri: `data:image/jpeg;base64,${base64Image}` }}
+        style={{ width: "100%", height: "100%" }}
+        contentFit='cover'
+      />
+    );
+  }
+
+  return <ItemImage item={season} variant='Primary' width={200} />;
+};
 
 type Props = {
   item: BaseItemDto;
@@ -81,7 +112,7 @@ export const SeasonGrid: React.FC<Props> = ({ item }) => {
             }}
           >
             <View className='relative aspect-[2/3] rounded-lg overflow-hidden bg-neutral-900'>
-              <ItemImage item={season} variant='Primary' width={200} />
+              <SeasonPoster season={season} isOffline={isOffline} />
               <WatchedIndicator item={season} />
             </View>
             <Text numberOfLines={2} className='text-xs text-center mt-1'>

@@ -181,6 +181,25 @@ export async function downloadSeriesImage(
 }
 
 /**
+ * Downloads and saves the season primary image for an episode so the real
+ * season poster can be shown offline.
+ */
+export async function downloadSeasonImage(
+  item: BaseItemDto,
+  saveSeasonImageFn: (item: BaseItemDto) => Promise<void>,
+): Promise<void> {
+  if (item.Type !== "Episode" || !item.SeasonId) {
+    return;
+  }
+
+  try {
+    await saveSeasonImageFn(item);
+  } catch (error) {
+    console.error(`[COVER] Failed to download season image:`, error);
+  }
+}
+
+/**
  * Fetches intro and credit segments for an item
  */
 export async function fetchSegments(
@@ -215,13 +234,21 @@ export async function downloadAdditionalAssets(params: {
   api: Api;
   saveImageFn: (itemId: string, url?: string) => Promise<void>;
   saveSeriesImageFn: (item: BaseItemDto) => Promise<void>;
+  saveSeasonImageFn: (item: BaseItemDto) => Promise<void>;
 }): Promise<{
   trickPlayData?: TrickPlayData;
   updatedMediaSource: MediaSourceInfo;
   introSegments?: MediaTimeSegment[];
   creditSegments?: MediaTimeSegment[];
 }> {
-  const { item, mediaSource, api, saveImageFn, saveSeriesImageFn } = params;
+  const {
+    item,
+    mediaSource,
+    api,
+    saveImageFn,
+    saveSeriesImageFn,
+    saveSeasonImageFn,
+  } = params;
 
   // Run all downloads in parallel for speed
   const [
@@ -248,6 +275,10 @@ export async function downloadAdditionalAssets(params: {
     }),
     downloadSeriesImage(item, saveSeriesImageFn).catch((err) => {
       console.error("[COVER] Error downloading series image:", err);
+      return undefined;
+    }),
+    downloadSeasonImage(item, saveSeasonImageFn).catch((err) => {
+      console.error("[COVER] Error downloading season image:", err);
       return undefined;
     }),
   ]);

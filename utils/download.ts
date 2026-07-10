@@ -22,7 +22,20 @@ const useDownloadHelper = () => {
     }
   };
 
-  return { saveSeriesPrimaryImage };
+  const saveSeasonPrimaryImage = async (item: BaseItemDto) => {
+    if (
+      item.Type === "Episode" &&
+      item.SeasonId &&
+      !storage.getString(item.SeasonId)
+    ) {
+      await saveImage(
+        item.SeasonId,
+        getPrimaryImageUrlById({ api, id: item.SeasonId }),
+      );
+    }
+  };
+
+  return { saveSeriesPrimaryImage, saveSeasonPrimaryImage };
 };
 
 export default useDownloadHelper;

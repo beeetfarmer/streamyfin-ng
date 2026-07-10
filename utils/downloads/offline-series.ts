@@ -88,7 +88,13 @@ export function buildOfflineSeasons(
       IndexNumber: seasonNum,
       Name: firstEpisode?.SeasonName || `Season ${seasonNum}`,
       SeriesId: seriesId,
-    } as BaseItemDto;
+      // Real season id from the downloaded episodes. Its primary image is stored
+      // in mmkv at download time and used as the season poster when offline.
+      SeasonId: firstEpisode?.SeasonId,
+      // Id of the first downloaded episode; its cover image is used as a
+      // fallback poster when the season image wasn't downloaded.
+      EpisodeId: firstEpisode?.Id,
+    } as BaseItemDto & { EpisodeId?: string };
   });
 }
 

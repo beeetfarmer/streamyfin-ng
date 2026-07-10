@@ -53,7 +53,8 @@ export function useDownloadOperations({
   onDataChange,
 }: UseDownloadOperationsProps) {
   const { t } = useTranslation();
-  const { saveSeriesPrimaryImage } = useDownloadHelper();
+  const { saveSeriesPrimaryImage, saveSeasonPrimaryImage } =
+    useDownloadHelper();
   const { saveImage } = useImageStorage();
 
   const startBackgroundDownload = useCallback(
@@ -96,6 +97,7 @@ export function useDownloadOperations({
           api,
           saveImageFn: saveImage,
           saveSeriesImageFn: saveSeriesPrimaryImage,
+          saveSeasonImageFn: saveSeasonPrimaryImage,
         });
 
         // Ensure URL is absolute (not relative) before storing
