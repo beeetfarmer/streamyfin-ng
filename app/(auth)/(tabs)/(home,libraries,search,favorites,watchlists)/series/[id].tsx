@@ -5,10 +5,11 @@ import { Image } from "expo-image";
 import { useLocalSearchParams, useNavigation } from "expo-router";
 import { useAtom } from "jotai";
 import type React from "react";
-import { useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Platform, View } from "react-native";
+import { Platform, TouchableOpacity, View } from "react-native";
 import { AddToFavorites } from "@/components/AddToFavorites";
+import { Text } from "@/components/common/Text";
 import { DownloadItems } from "@/components/DownloadItem";
 import { ItemPeopleSections } from "@/components/item/ItemPeopleSections";
 import { ParallaxScrollView } from "@/components/ParallaxPage";
@@ -18,6 +19,7 @@ import { SeriesHeader } from "@/components/series/SeriesHeader";
 import { useDownload } from "@/providers/DownloadProvider";
 import { apiAtom, userAtom } from "@/providers/JellyfinProvider";
 import { OfflineModeProvider } from "@/providers/OfflineModeProvider";
+import { confirmDelete } from "@/utils/confirmDelete";
 import {
   buildOfflineSeriesFromEpisodes,
   getDownloadedEpisodesForSeries,
@@ -40,7 +42,12 @@ const page: React.FC = () => {
 
   const [api] = useAtom(apiAtom);
   const [user] = useAtom(userAtom);
-  const { getDownloadedItems, downloadedItems } = useDownload();
+  const {
+    getDownloadedItems,
+    downloadedItems,
+    deleteItems,
+    getDownloadedItemSize,
+  } = useDownload();
 
   // For offline mode, construct series data from downloaded episodes
   // Include downloadedItems.length so query refetches when items are deleted
@@ -116,11 +123,43 @@ const page: React.FC = () => {
     enabled: isOffline || (!!api && !!user?.Id),
   });
 
+  const handleDeleteAllForShow = useCallback(() => {
+    const ids = (allEpisodes ?? [])
+      .map((e) => e.Id)
+      .filter((id): id is string => !!id);
+    if (ids.length === 0) return;
+    const size = ids.reduce(
+      (sum, id) => sum + (getDownloadedItemSize(id) || 0),
+      0,
+    );
+    confirmDelete({
+      title: t("home.downloads.confirm_delete_show_title"),
+      message: t("home.downloads.confirm_delete_show", {
+        count: ids.length,
+        size: size.bytesToReadable(),
+      }),
+      confirmText: t("home.downloads.delete"),
+      cancelText: t("home.downloads.cancel"),
+      onConfirm: () => deleteItems(ids),
+    });
+  }, [allEpisodes, getDownloadedItemSize, deleteItems, t]);
+
   useEffect(() => {
-    // Don't show header buttons in offline mode
+    // In offline mode, offer a "delete all downloads for this show" action.
     if (isOffline) {
       navigation.setOptions({
-        headerRight: () => null,
+        headerRight: () =>
+          !Platform.isTV && allEpisodes && allEpisodes.length > 0 ? (
+            <TouchableOpacity
+              onPress={handleDeleteAllForShow}
+              className='px-2 flex flex-row items-center'
+            >
+              <Ionicons name='trash-outline' size={20} color='#ef4444' />
+              <Text className='text-red-400 ml-1 text-xs'>
+                {t("home.downloads.delete_downloads_for_show_button")}
+              </Text>
+            </TouchableOpacity>
+          ) : null,
       });
       return;
     }
@@ -150,7 +189,7 @@ const page: React.FC = () => {
           </View>
         ) : null,
     });
-  }, [allEpisodes, isLoading, item, isOffline]);
+  }, [allEpisodes, isLoading, item, isOffline, handleDeleteAllForShow, t]);
 
   // For offline mode, we can show the page even without backdropUrl
   if (!item || (!isOffline && !backdropUrl)) return null;

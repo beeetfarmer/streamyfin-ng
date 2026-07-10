@@ -231,11 +231,30 @@ export function useDownloadOperations({
 
   const deleteItems = useCallback(
     async (ids: string[]) => {
+      let deletedCount = 0;
+
       for (const id of ids) {
-        await deleteFile(id);
+        const itemToDelete = removeDownloadedItem(id);
+        if (!itemToDelete) continue;
+        try {
+          deleteAllAssociatedFiles(itemToDelete);
+          deletedCount += 1;
+        } catch (error) {
+          console.error("Failed to delete files:", error);
+        }
+      }
+
+      if (deletedCount > 0) {
+        toast.success(
+          t("home.downloads.toasts.items_deleted", {
+            count: deletedCount,
+            defaultValue: `${deletedCount} downloads deleted`,
+          }),
+        );
+        onDataChange?.();
       }
     },
-    [deleteFile],
+    [t, onDataChange],
   );
 
   const deleteAllFiles = useCallback(async () => {

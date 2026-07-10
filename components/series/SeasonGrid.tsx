@@ -2,6 +2,7 @@ import type { BaseItemDto } from "@jellyfin/sdk/lib/generated-client/models";
 import { useQuery } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { useAtom } from "jotai";
+import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, TouchableOpacity, View } from "react-native";
 import { ItemImage } from "@/components/common/ItemImage";
@@ -11,7 +12,11 @@ import useRouter from "@/hooks/useAppRouter";
 import { useDownload } from "@/providers/DownloadProvider";
 import { apiAtom, userAtom } from "@/providers/JellyfinProvider";
 import { useOfflineMode } from "@/providers/OfflineModeProvider";
-import { buildOfflineSeasons } from "@/utils/downloads/offline-series";
+import { confirmDelete } from "@/utils/confirmDelete";
+import {
+  buildOfflineSeasons,
+  getDownloadedEpisodesForSeason,
+} from "@/utils/downloads/offline-series";
 import { storage } from "@/utils/mmkv";
 
 /**
@@ -52,7 +57,50 @@ export const SeasonGrid: React.FC<Props> = ({ item }) => {
   const [user] = useAtom(userAtom);
   const { t } = useTranslation();
   const isOffline = useOfflineMode();
-  const { getDownloadedItems, downloadedItems } = useDownload();
+  const {
+    getDownloadedItems,
+    downloadedItems,
+    deleteItems,
+    getDownloadedItemSize,
+  } = useDownload();
+
+  // Offline only: long-press a season poster to delete all its downloaded
+  // episodes at once.
+  const confirmDeleteSeason = useCallback(
+    (season: BaseItemDto) => {
+      if (!isOffline || season.IndexNumber == null || !item.Id) return;
+      const ids = getDownloadedEpisodesForSeason(
+        getDownloadedItems(),
+        item.Id,
+        season.IndexNumber,
+      )
+        .map((e) => e.Id)
+        .filter((id): id is string => !!id);
+      if (ids.length === 0) return;
+      const size = ids.reduce(
+        (sum, id) => sum + (getDownloadedItemSize(id) || 0),
+        0,
+      );
+      confirmDelete({
+        title: t("home.downloads.confirm_delete_season_title"),
+        message: t("home.downloads.confirm_delete_season", {
+          count: ids.length,
+          size: size.bytesToReadable(),
+        }),
+        confirmText: t("home.downloads.delete"),
+        cancelText: t("home.downloads.cancel"),
+        onConfirm: () => deleteItems(ids),
+      });
+    },
+    [
+      isOffline,
+      item.Id,
+      getDownloadedItems,
+      getDownloadedItemSize,
+      deleteItems,
+      t,
+    ],
+  );
   const router = useRouter();
 
   const { data: seasons } = useQuery({
@@ -100,6 +148,9 @@ export const SeasonGrid: React.FC<Props> = ({ item }) => {
           <TouchableOpacity
             key={season.Id}
             className='w-28'
+            onLongPress={
+              isOffline ? () => confirmDeleteSeason(season) : undefined
+            }
             onPress={() => {
               router.push({
                 pathname: "/season/[seasonId]",

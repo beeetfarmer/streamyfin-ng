@@ -9,9 +9,22 @@ import { DownloadSize } from "@/components/downloads/DownloadSize";
 import useRouter from "@/hooks/useAppRouter";
 import { useDownload } from "@/providers/DownloadProvider";
 import { storage } from "@/utils/mmkv";
+import { SelectionOverlay } from "../common/SelectionOverlay";
 import { Text } from "../common/Text";
 
-export const SeriesCard: React.FC<{ items: BaseItemDto[] }> = ({ items }) => {
+interface SeriesCardProps {
+  items: BaseItemDto[];
+  selectionMode?: boolean;
+  selected?: boolean;
+  onToggleSelect?: (items: BaseItemDto[]) => void;
+}
+
+export const SeriesCard: React.FC<SeriesCardProps> = ({
+  items,
+  selectionMode = false,
+  selected = false,
+  onToggleSelect,
+}) => {
   const { deleteItems } = useDownload();
   const { showActionSheetWithOptions } = useActionSheet();
   const router = useRouter();
@@ -45,18 +58,24 @@ export const SeriesCard: React.FC<{ items: BaseItemDto[] }> = ({ items }) => {
     );
   }, [showActionSheetWithOptions, deleteSeries]);
 
+  const handlePress = useCallback(() => {
+    if (selectionMode) {
+      onToggleSelect?.(items);
+      return;
+    }
+    router.push({
+      pathname: "/series/[id]",
+      params: { id: items[0].SeriesId!, offline: "true" },
+    });
+  }, [selectionMode, onToggleSelect, items, router]);
+
   return (
     <TouchableOpacity
-      onPress={() =>
-        router.push({
-          pathname: "/series/[id]",
-          params: { id: items[0].SeriesId!, offline: "true" },
-        })
-      }
-      onLongPress={showActionSheet}
+      onPress={handlePress}
+      onLongPress={selectionMode ? undefined : showActionSheet}
     >
       {base64Image ? (
-        <View className='w-28 aspect-[10/15] rounded-lg overflow-hidden mr-2 border border-neutral-900'>
+        <View className='relative w-28 aspect-[10/15] rounded-lg overflow-hidden mr-2 border border-neutral-900'>
           <Image
             source={{
               uri: `data:image/jpeg;base64,${base64Image}`,
@@ -70,15 +89,17 @@ export const SeriesCard: React.FC<{ items: BaseItemDto[] }> = ({ items }) => {
           <View className='bg-purple-600 rounded-full h-6 w-6 flex items-center justify-center absolute bottom-1 right-1'>
             <Text className='text-xs font-bold'>{items.length}</Text>
           </View>
+          {selectionMode && <SelectionOverlay selected={selected} />}
         </View>
       ) : (
-        <View className='w-28 aspect-[10/15] rounded-lg bg-neutral-900 mr-2 flex items-center justify-center'>
+        <View className='relative w-28 aspect-[10/15] rounded-lg bg-neutral-900 mr-2 flex items-center justify-center'>
           <Ionicons
             name='image-outline'
             size={24}
             color='gray'
             className='self-center mt-16'
           />
+          {selectionMode && <SelectionOverlay selected={selected} />}
         </View>
       )}
 

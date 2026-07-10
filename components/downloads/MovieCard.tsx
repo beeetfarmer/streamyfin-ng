@@ -7,16 +7,20 @@ import type { BaseItemDto } from "@jellyfin/sdk/lib/generated-client/models";
 import { Image } from "expo-image";
 import type React from "react";
 import { useCallback, useMemo } from "react";
-import { View } from "react-native";
+import { Pressable, View } from "react-native";
 import { DownloadSize } from "@/components/downloads/DownloadSize";
 import { useDownload } from "@/providers/DownloadProvider";
 import { storage } from "@/utils/mmkv";
 import { ProgressBar } from "../common/ProgressBar";
+import { SelectionOverlay } from "../common/SelectionOverlay";
 import { TouchableItemRouter } from "../common/TouchableItemRouter";
 import { ItemCardText } from "../ItemCardText";
 
 interface MovieCardProps {
   item: BaseItemDto;
+  selectionMode?: boolean;
+  selected?: boolean;
+  onToggleSelect?: (item: BaseItemDto) => void;
 }
 
 /**
@@ -24,7 +28,12 @@ interface MovieCardProps {
  * @param {MovieCardProps} props - The component props.
  * @returns {React.ReactElement} The rendered MovieCard component.
  */
-export const MovieCard: React.FC<MovieCardProps> = ({ item }) => {
+export const MovieCard: React.FC<MovieCardProps> = ({
+  item,
+  selectionMode = false,
+  selected = false,
+  onToggleSelect,
+}) => {
   const { deleteFile } = useDownload();
   const { showActionSheetWithOptions } = useActionSheet();
 
@@ -66,8 +75,8 @@ export const MovieCard: React.FC<MovieCardProps> = ({ item }) => {
     );
   }, [showActionSheetWithOptions, handleDeleteFile]);
 
-  return (
-    <TouchableItemRouter onLongPress={showActionSheet} item={item}>
+  const content = (
+    <>
       {base64Image ? (
         <View className='relative w-28 aspect-[10/15] rounded-lg overflow-hidden mr-2 border border-neutral-900'>
           <Image
@@ -81,6 +90,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({ item }) => {
             contentFit='cover'
           />
           <ProgressBar item={item} />
+          {selectionMode && <SelectionOverlay selected={selected} />}
         </View>
       ) : (
         <View className='relative w-28 aspect-[10/15] rounded-lg bg-neutral-900 mr-2 flex items-center justify-center'>
@@ -91,12 +101,25 @@ export const MovieCard: React.FC<MovieCardProps> = ({ item }) => {
             className='self-center mt-16'
           />
           <ProgressBar item={item} />
+          {selectionMode && <SelectionOverlay selected={selected} />}
         </View>
       )}
       <View className='w-28'>
         <ItemCardText item={item} />
       </View>
       <DownloadSize items={[item]} />
+    </>
+  );
+
+  if (selectionMode) {
+    return (
+      <Pressable onPress={() => onToggleSelect?.(item)}>{content}</Pressable>
+    );
+  }
+
+  return (
+    <TouchableItemRouter onLongPress={showActionSheet} item={item}>
+      {content}
     </TouchableItemRouter>
   );
 };

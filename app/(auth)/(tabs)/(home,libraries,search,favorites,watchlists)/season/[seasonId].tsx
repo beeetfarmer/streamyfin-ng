@@ -9,9 +9,15 @@ import {
 } from "expo-router";
 import { useAtom } from "jotai";
 import type React from "react";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Platform, ScrollView, View } from "react-native";
+import {
+  Platform,
+  Pressable,
+  ScrollView,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import ContinueWatchingPoster from "@/components/ContinueWatchingPoster";
 import { Text } from "@/components/common/Text";
@@ -19,12 +25,14 @@ import { TouchableItemRouter } from "@/components/common/TouchableItemRouter";
 import { DownloadItems, DownloadSingleItem } from "@/components/DownloadItem";
 import { Loader } from "@/components/Loader";
 import { PlayedStatus } from "@/components/PlayedStatus";
+import { useSelection } from "@/hooks/useSelection";
 import { useDownload } from "@/providers/DownloadProvider";
 import { apiAtom, userAtom } from "@/providers/JellyfinProvider";
 import {
   OfflineModeProvider,
   useOfflineMode,
 } from "@/providers/OfflineModeProvider";
+import { confirmDelete } from "@/utils/confirmDelete";
 import { getDownloadedEpisodesForSeason } from "@/utils/downloads/offline-series";
 import { getUserItemData } from "@/utils/jellyfin/user-library/getUserItemData";
 import { runtimeTicksToSeconds } from "@/utils/time";
@@ -47,7 +55,22 @@ const SeasonEpisodesContent: React.FC = () => {
   const isOffline = useOfflineMode();
   const [api] = useAtom(apiAtom);
   const [user] = useAtom(userAtom);
-  const { getDownloadedItems, downloadedItems } = useDownload();
+  const {
+    getDownloadedItems,
+    downloadedItems,
+    deleteItems,
+    getDownloadedItemSize,
+  } = useDownload();
+
+  const {
+    selectionMode,
+    setSelectionMode,
+    selected,
+    count: selectedCount,
+    isSelected,
+    toggle,
+    exitSelection,
+  } = useSelection();
 
   const seasonNumber = seasonNumberParam ? Number(seasonNumberParam) : null;
 
@@ -115,16 +138,110 @@ const SeasonEpisodesContent: React.FC = () => {
     }, [refetchEpisodes]),
   );
 
+  // --- Offline download management (multi-select + delete-all) ---
+
+  const episodeIds = useMemo(
+    () =>
+      (episodes ?? [])
+        .map((e: BaseItemDto) => e.Id)
+        .filter((id): id is string => !!id),
+    [episodes],
+  );
+
+  const sizeOf = useCallback(
+    (ids: string[]) =>
+      ids.reduce((sum, id) => sum + (getDownloadedItemSize(id) || 0), 0),
+    [getDownloadedItemSize],
+  );
+
+  const handleDeleteSelected = useCallback(() => {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+    confirmDelete({
+      title: t("home.downloads.confirm_delete_title"),
+      message: t("home.downloads.confirm_delete_selected", {
+        count: ids.length,
+        size: sizeOf(ids).bytesToReadable(),
+      }),
+      confirmText: t("home.downloads.delete"),
+      cancelText: t("home.downloads.cancel"),
+      onConfirm: async () => {
+        await deleteItems(ids);
+        exitSelection();
+      },
+    });
+  }, [selected, sizeOf, deleteItems, exitSelection, t]);
+
+  const handleDeleteAllEpisodes = useCallback(() => {
+    if (episodeIds.length === 0) return;
+    confirmDelete({
+      title: t("home.downloads.confirm_delete_all_episodes_title"),
+      message: t("home.downloads.confirm_delete_all_episodes", {
+        count: episodeIds.length,
+        size: sizeOf(episodeIds).bytesToReadable(),
+      }),
+      confirmText: t("home.downloads.delete"),
+      cancelText: t("home.downloads.cancel"),
+      onConfirm: async () => {
+        await deleteItems(episodeIds);
+        exitSelection();
+      },
+    });
+  }, [episodeIds, sizeOf, deleteItems, exitSelection, t]);
+
   // Set header title and action buttons
   useEffect(() => {
     const title = isOffline
       ? `Season ${seasonNumber}`
       : (seasonItem?.Name ?? "");
 
+    const offlineDownloadActions =
+      isOffline && episodes && episodes.length > 0
+        ? () =>
+            selectionMode ? (
+              <View className='flex flex-row items-center'>
+                <TouchableOpacity
+                  onPress={handleDeleteSelected}
+                  disabled={selectedCount === 0}
+                  className='px-2'
+                >
+                  <Ionicons
+                    name='trash-outline'
+                    size={22}
+                    color={selectedCount === 0 ? "#6b7280" : "#ef4444"}
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={exitSelection} className='px-2'>
+                  <Text className='text-purple-400'>
+                    {t("home.downloads.done")}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View className='flex flex-row items-center'>
+                <TouchableOpacity
+                  onPress={() => setSelectionMode(true)}
+                  className='px-2'
+                >
+                  <Text className='text-purple-400'>
+                    {t("home.downloads.select")}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleDeleteAllEpisodes}
+                  className='px-2'
+                >
+                  <Ionicons name='trash-outline' size={22} color='#ef4444' />
+                </TouchableOpacity>
+              </View>
+            )
+        : undefined;
+
     navigation.setOptions({
       title,
-      headerRight:
-        !isOffline && episodes && episodes.length > 0
+      headerRight: isOffline
+        ? offlineDownloadActions
+        : episodes && episodes.length > 0
           ? () => (
               <View className='flex flex-row items-center space-x-2'>
                 <PlayedStatus items={episodes} />
@@ -144,7 +261,19 @@ const SeasonEpisodesContent: React.FC = () => {
             )
           : undefined,
     });
-  }, [seasonItem, episodes, isOffline, seasonNumber]);
+  }, [
+    seasonItem,
+    episodes,
+    isOffline,
+    seasonNumber,
+    selectionMode,
+    selectedCount,
+    handleDeleteSelected,
+    handleDeleteAllEpisodes,
+    exitSelection,
+    setSelectionMode,
+    t,
+  ]);
 
   return (
     <ScrollView
@@ -159,44 +288,81 @@ const SeasonEpisodesContent: React.FC = () => {
             <Loader />
           </View>
         ) : (
-          episodes?.map((e: BaseItemDto) => (
-            <TouchableItemRouter
-              item={e}
-              key={e.Id}
-              className='flex flex-col mb-4'
-            >
-              <View className='flex flex-row items-start mb-2'>
-                <View className='mr-2'>
-                  <ContinueWatchingPoster
-                    size='small'
-                    item={e}
-                    useEpisodePoster
-                  />
-                </View>
-                <View className='shrink'>
-                  <Text numberOfLines={2}>{e.Name}</Text>
-                  <Text numberOfLines={1} className='text-xs text-neutral-500'>
-                    {`S${e.ParentIndexNumber?.toString()}:E${e.IndexNumber?.toString()}`}
-                  </Text>
-                  <Text className='text-xs text-neutral-500'>
-                    {runtimeTicksToSeconds(e.RunTimeTicks)}
-                  </Text>
-                </View>
-                {!isOffline && (
-                  <View className='self-start ml-auto -mt-0.5'>
-                    <DownloadSingleItem item={e} />
+          episodes?.map((e: BaseItemDto) => {
+            const episodeSelected = e.Id ? isSelected(e.Id) : false;
+            const content = (
+              <>
+                <View className='flex flex-row items-start mb-2'>
+                  <View className='mr-2 relative'>
+                    <ContinueWatchingPoster
+                      size='small'
+                      item={e}
+                      useEpisodePoster
+                    />
+                    {selectionMode && (
+                      <View className='absolute top-1 left-1 h-6 w-6 rounded-full items-center justify-center border-2 border-white bg-black/50'>
+                        {episodeSelected && (
+                          <View className='h-6 w-6 rounded-full items-center justify-center bg-purple-600 border-2 border-purple-600'>
+                            <Ionicons
+                              name='checkmark'
+                              size={16}
+                              color='white'
+                            />
+                          </View>
+                        )}
+                      </View>
+                    )}
                   </View>
-                )}
-              </View>
+                  <View className='shrink'>
+                    <Text numberOfLines={2}>{e.Name}</Text>
+                    <Text
+                      numberOfLines={1}
+                      className='text-xs text-neutral-500'
+                    >
+                      {`S${e.ParentIndexNumber?.toString()}:E${e.IndexNumber?.toString()}`}
+                    </Text>
+                    <Text className='text-xs text-neutral-500'>
+                      {runtimeTicksToSeconds(e.RunTimeTicks)}
+                    </Text>
+                  </View>
+                  {!isOffline && (
+                    <View className='self-start ml-auto -mt-0.5'>
+                      <DownloadSingleItem item={e} />
+                    </View>
+                  )}
+                </View>
 
-              <Text
-                numberOfLines={3}
-                className='text-xs text-neutral-500 shrink'
+                <Text
+                  numberOfLines={3}
+                  className='text-xs text-neutral-500 shrink'
+                >
+                  {e.Overview}
+                </Text>
+              </>
+            );
+
+            if (selectionMode) {
+              return (
+                <Pressable
+                  key={e.Id}
+                  className='flex flex-col mb-4'
+                  onPress={() => e.Id && toggle(e.Id)}
+                >
+                  {content}
+                </Pressable>
+              );
+            }
+
+            return (
+              <TouchableItemRouter
+                item={e}
+                key={e.Id}
+                className='flex flex-col mb-4'
               >
-                {e.Overview}
-              </Text>
-            </TouchableItemRouter>
-          ))
+                {content}
+              </TouchableItemRouter>
+            );
+          })
         )}
         {!isPending && (episodes?.length || 0) === 0 ? (
           <View className='flex flex-col'>
