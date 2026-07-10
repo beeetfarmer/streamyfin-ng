@@ -36,6 +36,7 @@ import { DiscoverFilters } from "@/components/search/DiscoverFilters";
 import { LoadingSkeleton } from "@/components/search/LoadingSkeleton";
 import { SearchItemWrapper } from "@/components/search/SearchItemWrapper";
 import { SearchTabButtons } from "@/components/search/SearchTabButtons";
+import { Colors } from "@/constants/Colors";
 import useRouter from "@/hooks/useAppRouter";
 import { useJellyseerr } from "@/hooks/useJellyseerr";
 import { apiAtom, userAtom } from "@/providers/JellyfinProvider";
@@ -293,6 +294,9 @@ export default function search() {
         },
         hideWhenScrolling: false,
         autoFocus: false,
+        textColor: Colors.text,
+        hintTextColor: Colors.icon,
+        headerIconColor: Colors.text,
       },
     });
   }, [navigation]);
