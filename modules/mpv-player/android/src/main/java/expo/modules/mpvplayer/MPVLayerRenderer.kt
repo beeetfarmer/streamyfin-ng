@@ -354,15 +354,24 @@ class MPVLayerRenderer(private val context: Context) : MPVLib.EventObserver {
     }
     
     fun seekTo(seconds: Double) {
-        val clamped = maxOf(0.0, seconds)
+        // Guard against issuing commands on a destroyed MPV context. Rapid seeks
+        // can race with stop()/destroy() and would otherwise crash natively.
+        if (!isRunning || isStopping) return
+        // Clamp to the valid range so we never seek past the end of the media,
+        // which can drive libmpv to EOF during back-to-back seeks.
+        val upperBound = if (cachedDuration > 0.0) cachedDuration else Double.MAX_VALUE
+        val clamped = seconds.coerceIn(0.0, upperBound)
         cachedPosition = clamped
         MPVLib.command(arrayOf("seek", clamped.toString(), "absolute"))
     }
-    
+
     fun seekBy(seconds: Double) {
-        val newPosition = maxOf(0.0, cachedPosition + seconds)
+        if (!isRunning || isStopping) return
+        val upperBound = if (cachedDuration > 0.0) cachedDuration else Double.MAX_VALUE
+        val newPosition = (cachedPosition + seconds).coerceIn(0.0, upperBound)
+        val delta = newPosition - cachedPosition
         cachedPosition = newPosition
-        MPVLib.command(arrayOf("seek", seconds.toString(), "relative"))
+        MPVLib.command(arrayOf("seek", delta.toString(), "relative"))
     }
     
     fun setSpeed(speed: Double) {

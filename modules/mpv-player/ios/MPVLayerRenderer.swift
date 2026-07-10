@@ -610,7 +610,9 @@ final class MPVLayerRenderer {
     
     func seek(to seconds: Double) {
         guard let handle = mpv else { return }
-        let clamped = max(0, seconds)
+        // Clamp to the valid range so back-to-back seeks never run past the end.
+        let upperBound = cachedDuration > 0 ? cachedDuration : Double.greatestFiniteMagnitude
+        let clamped = min(max(0, seconds), upperBound)
         cachedPosition = clamped
         commandSync(handle, ["seek", String(clamped), "absolute"])
     }
@@ -619,9 +621,11 @@ final class MPVLayerRenderer {
 
     func seek(by seconds: Double) {
         guard let handle = mpv else { return }
-        let newPosition = max(0, cachedPosition + seconds)
+        let upperBound = cachedDuration > 0 ? cachedDuration : Double.greatestFiniteMagnitude
+        let newPosition = min(max(0, cachedPosition + seconds), upperBound)
+        let delta = newPosition - cachedPosition
         cachedPosition = newPosition
-        commandSync(handle, ["seek", String(seconds), "relative"])
+        commandSync(handle, ["seek", String(delta), "relative"])
     }
     
     /// Sync timebase - no-op for vo_avfoundation (mpv handles timing)
