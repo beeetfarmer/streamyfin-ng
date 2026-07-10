@@ -2,10 +2,14 @@ import { Ionicons } from "@expo/vector-icons";
 import type { BaseItemDto } from "@jellyfin/sdk/lib/generated-client/models";
 import { getTvShowsApi } from "@jellyfin/sdk/lib/utils/api";
 import { useQuery } from "@tanstack/react-query";
-import { useLocalSearchParams, useNavigation } from "expo-router";
+import {
+  useFocusEffect,
+  useLocalSearchParams,
+  useNavigation,
+} from "expo-router";
 import { useAtom } from "jotai";
 import type React from "react";
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -62,7 +66,11 @@ const SeasonEpisodesContent: React.FC = () => {
   });
 
   // Fetch episodes for this season
-  const { data: episodes, isPending } = useQuery({
+  const {
+    data: episodes,
+    isPending,
+    refetch: refetchEpisodes,
+  } = useQuery({
     queryKey: [
       "seasonEpisodes",
       seriesId,
@@ -97,6 +105,15 @@ const SeasonEpisodesContent: React.FC = () => {
       ? !!seriesId && seasonNumber !== null
       : !!api && !!user?.Id && !!seriesId && !!seasonId,
   });
+
+  // Refresh episode user data (watched progress bars) whenever the screen
+  // regains focus, e.g. after returning from the player. The screen stays
+  // mounted behind the player, so React Query won't refetch on its own.
+  useFocusEffect(
+    useCallback(() => {
+      refetchEpisodes();
+    }, [refetchEpisodes]),
+  );
 
   // Set header title and action buttons
   useEffect(() => {
